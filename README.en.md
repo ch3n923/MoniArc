@@ -19,7 +19,7 @@ Built with Swift 6, SwiftUI, and AppKit, it has no third-party runtime dependenc
 
 ## Installation
 
-MoniArc release packages are distributed exclusively through [GitHub Releases](https://github.com/ch3n923/MoniArc/releases). It is not distributed through the Mac App Store or a standalone download website.
+MoniArc release packages are distributed through [GitHub Releases](https://github.com/ch3n923/MoniArc/releases). 
 
 ## Requirements
 
