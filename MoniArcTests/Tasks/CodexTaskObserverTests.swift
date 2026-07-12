@@ -155,6 +155,41 @@ final class CodexTaskObserverTests: XCTestCase {
         XCTAssertEqual(third, .snapshot([]))
     }
 
+    func testPeriodicReconciliationClearsCompletedTask() async throws {
+        let sandbox = try TaskTestSandbox()
+        try sandbox.createThreadsDatabase()
+        let rollout = try sandbox.writeRollout(named: "reconcile", contents: taskStartedLine() + "\n")
+        try sandbox.insertThread(
+            id: "reconcile-task",
+            rolloutURL: rollout,
+            title: "Reconcile task",
+            updatedAt: 1_700_000_000
+        )
+        let observer = CodexTaskObserver(
+            configuration: CodexTaskObserverConfiguration(
+                codexDirectory: sandbox.rootURL,
+                databaseURL: sandbox.databaseURL,
+                sessionsURL: sandbox.sessionsURL,
+                reconciliationNanoseconds: 20_000_000
+            ),
+            processChecker: StubCodexProcessChecker(isAvailable: true)
+        )
+        let stream = await observer.updates()
+        var iterator = stream.makeAsyncIterator()
+
+        await observer.start()
+        let initial = await iterator.next()
+        XCTAssertEqual(initial?.tasks.first?.runState, .running)
+
+        try Data((taskStartedLine() + "\n" + taskCompletedLine() + "\n").utf8)
+            .write(to: rollout, options: .atomic)
+
+        let completed = await iterator.next()
+        await observer.stop()
+
+        XCTAssertEqual(completed?.tasks, [])
+    }
+
     private func makeObserver(
         sandbox: TaskTestSandbox,
         available: Bool,
@@ -176,4 +211,5 @@ final class CodexTaskObserverTests: XCTestCase {
         var iterator = stream.makeAsyncIterator()
         return await iterator.next()
     }
+
 }

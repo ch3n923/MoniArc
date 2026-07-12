@@ -131,6 +131,32 @@ final class JSONLTaskLifecycleScannerTests: XCTestCase {
         XCTAssertEqual(result.activeState, .running)
     }
 
+    func testActiveTurnIsInferredWhenTaskStartedFallsOutsideBoundedTail() throws {
+        let url = try temporaryJSONL([
+            taskStartedLine(),
+            String(repeating: "x", count: 4_096),
+            #"{"type":"event_msg","payload":{"type":"agent_reasoning"}}"#,
+        ].joined(separator: "\n"))
+
+        let result = try scanner.scan(fileURL: url, byteLimit: 512)
+
+        XCTAssertEqual(result.activeState, .running)
+        XCTAssertEqual(result.recognizedLifecycleCount, 1)
+    }
+
+    func testInferredActivityIsClearedByLaterTaskComplete() throws {
+        let url = try temporaryJSONL([
+            taskStartedLine(),
+            String(repeating: "x", count: 4_096),
+            #"{"type":"response_item","payload":{"type":"reasoning"}}"#,
+            taskCompletedLine(),
+        ].joined(separator: "\n"))
+
+        let result = try scanner.scan(fileURL: url, byteLimit: 512)
+
+        XCTAssertNil(result.activeState)
+    }
+
     private func temporaryJSONL(_ contents: String) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("MoniArcLifecycle-\(UUID().uuidString)")

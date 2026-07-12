@@ -60,6 +60,7 @@ struct CodexTaskObserverConfiguration: Sendable {
     static let defaultPerFileByteLimit = 8 * 1_024 * 1_024
     static let defaultTotalByteLimit = 32 * 1_024 * 1_024
     static let defaultFSEventsCoalescingNanoseconds: UInt64 = 300_000_000
+    static let defaultReconciliationNanoseconds: UInt64 = 2_000_000_000
 
     let codexDirectory: URL
     let databaseURL: URL
@@ -68,6 +69,7 @@ struct CodexTaskObserverConfiguration: Sendable {
     let perFileByteLimit: Int
     let totalByteLimit: Int
     let fseventsCoalescingNanoseconds: UInt64
+    let reconciliationNanoseconds: UInt64
 
     init(
         codexDirectory: URL,
@@ -76,7 +78,8 @@ struct CodexTaskObserverConfiguration: Sendable {
         candidateLimit: Int = defaultCandidateLimit,
         perFileByteLimit: Int = defaultPerFileByteLimit,
         totalByteLimit: Int = defaultTotalByteLimit,
-        fseventsCoalescingNanoseconds: UInt64 = defaultFSEventsCoalescingNanoseconds
+        fseventsCoalescingNanoseconds: UInt64 = defaultFSEventsCoalescingNanoseconds,
+        reconciliationNanoseconds: UInt64 = defaultReconciliationNanoseconds
     ) {
         let root = codexDirectory.standardizedFileURL
         self.codexDirectory = root
@@ -86,6 +89,7 @@ struct CodexTaskObserverConfiguration: Sendable {
         self.perFileByteLimit = max(1, min(perFileByteLimit, Self.defaultPerFileByteLimit))
         self.totalByteLimit = max(1, min(totalByteLimit, Self.defaultTotalByteLimit))
         self.fseventsCoalescingNanoseconds = fseventsCoalescingNanoseconds
+        self.reconciliationNanoseconds = max(1, reconciliationNanoseconds)
     }
 
     static var live: CodexTaskObserverConfiguration {

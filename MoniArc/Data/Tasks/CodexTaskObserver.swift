@@ -28,6 +28,9 @@ private struct PendingTaskObservationSignal {
 actor CodexTaskObserver {
     typealias SnapshotStream = AsyncStream<CodexTaskObservationSnapshot>
 
+    private static let reconciliationPerFileByteLimit = 64 * 1_024
+    private static let reconciliationTotalByteLimit = 2 * 1_024 * 1_024
+
     private let configuration: CodexTaskObserverConfiguration
     private let candidateIndex: SQLiteTaskCandidateIndex
     private let lifecycleScanner: JSONLTaskLifecycleScanner
@@ -38,6 +41,7 @@ actor CodexTaskObserver {
     private var lastSnapshot: CodexTaskObservationSnapshot?
     private var watcher: SessionsFSEventsWatcher?
     private var debounceTask: Task<Void, Never>?
+    private var reconciliationTask: Task<Void, Never>?
     private var isStarted = false
     private var watcherStartupFailed = false
     private var refreshGeneration: UInt64 = 0
@@ -88,6 +92,7 @@ actor CodexTaskObserver {
         }
 
         await refresh()
+        startPeriodicReconciliation()
     }
 
     func stop() {
@@ -96,6 +101,8 @@ actor CodexTaskObserver {
         refreshGeneration &+= 1
         debounceTask?.cancel()
         debounceTask = nil
+        reconciliationTask?.cancel()
+        reconciliationTask = nil
         watcher?.stop()
         watcher = nil
         watcherStartupFailed = false
@@ -105,6 +112,13 @@ actor CodexTaskObserver {
     }
 
     func refresh() async {
+        await refresh(
+            perFileByteLimit: configuration.perFileByteLimit,
+            totalByteLimit: configuration.totalByteLimit
+        )
+    }
+
+    private func refresh(perFileByteLimit: Int, totalByteLimit: Int) async {
         let capturedAt = now()
         guard await processChecker.isCodexAvailable() else {
             publish(.unavailable(.disconnected, at: capturedAt))
@@ -126,7 +140,7 @@ actor CodexTaskObserver {
             return
         }
 
-        var remainingByteBudget = configuration.totalByteLimit
+        var remainingByteBudget = totalByteLimit
         var tasks: [CodexObservedTask] = []
         var allowedCandidateCount = 0
         var existingFileCount = 0
@@ -139,7 +153,7 @@ actor CodexTaskObserver {
             }
             allowedCandidateCount += 1
 
-            let fileLimit = min(configuration.perFileByteLimit, remainingByteBudget)
+            let fileLimit = min(perFileByteLimit, remainingByteBudget)
             do {
                 let result = try lifecycleScanner.scan(fileURL: candidate.rolloutURL, byteLimit: fileLimit)
                 existingFileCount += 1
@@ -257,6 +271,30 @@ actor CodexTaskObserver {
     private func refreshAfterDebounce(generation: UInt64) async {
         guard isStarted, generation == refreshGeneration else { return }
         await refresh()
+    }
+
+    private func startPeriodicReconciliation() {
+        reconciliationTask?.cancel()
+        let interval = configuration.reconciliationNanoseconds
+        reconciliationTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(nanoseconds: interval)
+                } catch {
+                    return
+                }
+                guard let self else { return }
+                await self.refreshIfStarted()
+            }
+        }
+    }
+
+    private func refreshIfStarted() async {
+        guard isStarted else { return }
+        await refresh(
+            perFileByteLimit: Self.reconciliationPerFileByteLimit,
+            totalByteLimit: Self.reconciliationTotalByteLimit
+        )
     }
 
     private func removeContinuation(_ id: UUID) {

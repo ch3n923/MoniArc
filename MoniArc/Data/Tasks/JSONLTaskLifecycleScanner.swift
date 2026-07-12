@@ -27,6 +27,13 @@ struct JSONLTaskLifecycleScanner: Sendable {
                 latestResetActivityOffset = line.absoluteOffset
                 recognizedLifecycleCount += 1
 
+            case .taskActivity:
+                if state == nil {
+                    state = .running
+                }
+                latestResetActivityOffset = line.absoluteOffset
+                recognizedLifecycleCount += 1
+
             case let .requestUserInput(callID):
                 state = .waitingForUser
                 if let callID {
@@ -36,10 +43,13 @@ struct JSONLTaskLifecycleScanner: Sendable {
                 recognizedLifecycleCount += 1
 
             case let .toolOutput(callID):
-                guard let callID, pendingUserInputCalls.remove(callID) != nil else {
-                    continue
-                }
-                if pendingUserInputCalls.isEmpty {
+                let matchedPendingInput = callID.map { pendingUserInputCalls.remove($0) != nil } ?? false
+                if matchedPendingInput, pendingUserInputCalls.isEmpty {
+                    state = .running
+                } else if state == nil {
+                    // A bounded tail may begin after task_started. A tool output
+                    // still proves that this turn is active unless a later
+                    // terminal event clears it.
                     state = .running
                 }
                 latestResetActivityOffset = line.absoluteOffset
@@ -140,6 +150,7 @@ private struct BoundedJSONLTailReader {
 
 private enum LifecycleEnvelopeEvent {
     case taskStarted
+    case taskActivity
     case requestUserInput(callID: String?)
     case toolOutput(callID: String?)
     case taskCompleted
@@ -168,6 +179,8 @@ private struct LifecycleEnvelopeDecoder: Sendable {
             switch payloadType {
             case "taskstarted":
                 return .taskStarted
+            case "usermessage", "agentreasoning", "agentmessage", "tokencount":
+                return .taskActivity
             case "taskcomplete", "taskcompleted":
                 return .taskCompleted
             case "error", "systemerror", "failed":
@@ -190,8 +203,11 @@ private struct LifecycleEnvelopeDecoder: Sendable {
             if Self.normalize(envelope.payload.name) == "requestuserinput" {
                 return .requestUserInput(callID: envelope.payload.callID)
             }
+            return .taskActivity
         case "functioncalloutput", "customtoolcalloutput":
             return .toolOutput(callID: envelope.payload.callID)
+        case "reasoning", "message":
+            return .taskActivity
         case "error", "systemerror", "failed":
             return .explicitError
         default:
