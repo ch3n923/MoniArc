@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - Native macOS status island for Codex task state and quota windows.
-- Notch overlay, floating placement, hover expansion and pinning.
+- Notch overlay, floating placement and hover expansion.
 - Read-only local task observation with bounded file scanning.
 - Debug Harness for deterministic UI and state verification.
 - Developer ID distribution, privacy and open-source documentation.

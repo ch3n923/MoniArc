@@ -14,7 +14,6 @@ final class PanelCoordinator: NSObject, PanelDriver {
     let panel = IslandPanel()
 
     var onHoverChanged: ((Bool) -> Void)?
-    var onTogglePinned: (() -> Void)?
     var onPlacementPreferenceChanged: ((PlacementPreference) -> Void)?
     var onRefreshQuota: (() -> Void)?
     var onDisplayChanged: (() -> Void)?
@@ -155,7 +154,6 @@ final class PanelCoordinator: NSObject, PanelDriver {
     }
 
     private func configureContent() {
-        model.onBlankClick = { [weak self] in self?.onTogglePinned?() }
         model.onContextMenu = { [weak self] point in self?.showContextMenu(at: point) }
 
         let host = NSHostingView(rootView: IslandView(model: model))

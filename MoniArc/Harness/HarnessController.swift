@@ -199,7 +199,6 @@ final class HarnessController {
             setStatus: { [weak environment] in environment?.setTaskStatus($0) },
             setPlacement: { [weak store] in store?.send(.placementPreferenceChanged($0)) },
             setDisplay: { [weak self] in self?.setDisplayProfile($0) },
-            togglePinned: { [weak store] in store?.send(.togglePinned) },
             refreshQuota: { [weak store] in store?.send(.refreshQuota) },
             toggleQuotaStale: { [weak environment] in environment?.toggleQuotaStale() },
             setWeeklyMissing: { [weak environment] in environment?.setWeeklyMissing() },
@@ -307,7 +306,6 @@ private struct HarnessControlView: View {
     var setStatus: (IslandVisualStatus) -> Void
     var setPlacement: (PlacementPreference) -> Void
     var setDisplay: (HarnessDisplayProfile) -> Void
-    var togglePinned: () -> Void
     var refreshQuota: () -> Void
     var toggleQuotaStale: () -> Void
     var setWeeklyMissing: () -> Void
@@ -330,7 +328,6 @@ private struct HarnessControlView: View {
                     Button("自动") { setPlacement(.automatic) }
                     Button("覆盖") { setPlacement(.overlay) }
                     Button("悬浮") { setPlacement(.floating) }
-                    Button("锁定 / 解锁", action: togglePinned)
                 }
                 Picker("屏幕", selection: $displayProfile) {
                     ForEach(HarnessDisplayProfile.allCases) { profile in

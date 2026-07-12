@@ -21,7 +21,6 @@ public enum IslandAction: Sendable {
     case hoverChanged(Bool)
     case hoverExpansionTimerFired(GenerationToken)
     case hoverCollapseTimerFired(GenerationToken)
-    case togglePinned
     case selectTask(TaskSelectionDirection)
     case placementPreferenceChanged(PlacementPreference)
     case panelLayoutUpdated(PanelLayoutSnapshot?)
@@ -162,7 +161,7 @@ public struct IslandReducer: Sendable {
             guard
                 token == state.interactionGeneration,
                 state.panelPhase == .expandPending,
-                state.isPointerInside || state.isPinned,
+                state.isPointerInside,
                 let deadline = state.pendingPanelDeadline
             else { return [] }
             if now < deadline {
@@ -183,7 +182,6 @@ public struct IslandReducer: Sendable {
                 token == state.interactionGeneration,
                 state.panelPhase == .collapsePending,
                 !state.isPointerInside,
-                !state.isPinned,
                 let deadline = state.pendingPanelDeadline
             else { return [] }
             if now < deadline {
@@ -202,32 +200,6 @@ public struct IslandReducer: Sendable {
                 return setQuotaPause(.panelInteraction, active: false, state: &state, now: now)
             }
             return panelEffects
-
-        case .togglePinned:
-            if state.isPinned {
-                state.isPinned = false
-                if !state.isPointerInside, state.panelPhase == .expanded {
-                    return scheduleCollapse(state: &state, now: now)
-                }
-                return []
-            }
-
-            state.isPinned = true
-            var effects = setQuotaPause(.panelInteraction, active: true, state: &state, now: now)
-            state.interactionGeneration = state.interactionGeneration.advanced()
-            state.pendingPanelDeadline = nil
-            effects += [.cancelTimer(.hoverExpansion), .cancelTimer(.hoverCollapse)]
-            if state.panelPhase != .expanded {
-                state.panelPhase = .expanded
-                effects += submitPanelIfPossible(
-                    state: &state,
-                    expanded: true,
-                    animated: true,
-                    duration: configuration.expansionDuration,
-                    curve: .easeOut
-                )
-            }
-            return effects
 
         case let .selectTask(direction):
             guard !state.tasks.isEmpty else { return [] }
@@ -267,7 +239,6 @@ public struct IslandReducer: Sendable {
             }
             state.isAwaitingRehostLayout = false
             state.panelPhase = .collapsed
-            state.isPinned = false
             state.interactionGeneration = state.interactionGeneration.advanced()
             state.pendingPanelDeadline = nil
             effects += [.cancelTimer(.hoverExpansion), .cancelTimer(.hoverCollapse)]
@@ -290,7 +261,7 @@ public struct IslandReducer: Sendable {
             if !state.isAwaitingRehostLayout {
                 effects += setQuotaPause(.windowRehosting, active: false, state: &state, now: now)
             }
-            if state.panelPhase == .collapsed, !state.isPointerInside, !state.isPinned {
+            if state.panelPhase == .collapsed, !state.isPointerInside {
                 effects += setQuotaPause(.panelInteraction, active: false, state: &state, now: now)
             }
             return effects
@@ -348,7 +319,6 @@ public struct IslandReducer: Sendable {
         state: inout IslandState,
         now: MonotonicInstant
     ) -> [IslandEffect] {
-        guard !state.isPinned else { return [] }
         switch state.panelPhase {
         case .expandPending:
             state.panelPhase = .collapsed
@@ -389,7 +359,6 @@ public struct IslandReducer: Sendable {
     ) -> [IslandEffect] {
         var effects = setQuotaPause(.windowRehosting, active: true, state: &state, now: now)
         state.panelPhase = .collapsed
-        state.isPinned = false
         state.interactionGeneration = state.interactionGeneration.advanced()
         state.pendingPanelDeadline = nil
         // Invalidate every callback from the old host before asking for new geometry.

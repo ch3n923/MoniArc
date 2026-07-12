@@ -33,7 +33,6 @@ struct AdditionalQuotaPresentation: Identifiable, Equatable, Sendable {
 final class IslandViewModel: ObservableObject {
     @Published var placement: PanelPlacement = .floating
     @Published var isExpanded = false
-    @Published var isPinned = false
     @Published var usesWingLayout = false
     @Published var physicalNotchWidth: CGFloat = 0
     @Published var activeQuotaPage: QuotaPagePresentation = .fiveHour
@@ -47,7 +46,6 @@ final class IslandViewModel: ObservableObject {
     @Published var borderGlowStyle: BorderGlowStyle = .breathe
     @Published var quotaSourceMessage: String?
 
-    var onBlankClick: (() -> Void)?
     var onPreviousTask: (() -> Void)?
     var onNextTask: (() -> Void)?
     var onContextMenu: ((CGPoint) -> Void)?

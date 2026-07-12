@@ -313,7 +313,6 @@ public struct IslandState: Equatable, Sendable {
     public var panelLayout: PanelLayoutSnapshot?
     public var panelRevision: PanelRevision
     public var isPointerInside: Bool
-    public var isPinned: Bool
     public var isAwaitingRehostLayout: Bool
 
     public var quotaRotation: QuotaRotationState
@@ -338,7 +337,6 @@ public struct IslandState: Equatable, Sendable {
         panelLayout: PanelLayoutSnapshot? = nil,
         panelRevision: PanelRevision = .init(),
         isPointerInside: Bool = false,
-        isPinned: Bool = false,
         isAwaitingRehostLayout: Bool = false,
         quotaRotation: QuotaRotationState = .init(),
         quotaPauseReasons: Set<QuotaPauseReason> = [],
@@ -359,7 +357,6 @@ public struct IslandState: Equatable, Sendable {
         self.panelLayout = panelLayout
         self.panelRevision = panelRevision
         self.isPointerInside = isPointerInside
-        self.isPinned = isPinned
         self.isAwaitingRehostLayout = isAwaitingRehostLayout
         self.quotaRotation = quotaRotation
         self.quotaPauseReasons = quotaPauseReasons

@@ -22,7 +22,6 @@ struct IslandView: View {
 
                 ZStack(alignment: .top) {
                     InteractionCaptureView(
-                        onClick: { model.onBlankClick?() },
                         onRightClick: { model.onContextMenu?($0) }
                     )
 

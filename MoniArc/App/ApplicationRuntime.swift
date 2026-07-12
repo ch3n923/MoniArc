@@ -112,9 +112,6 @@ final class ApplicationRuntime {
         panelCoordinator.onHoverChanged = { [weak pointerSensor] isInside in
             pointerSensor?.emit(isInside)
         }
-        panelCoordinator.onTogglePinned = { [weak store] in
-            store?.send(.togglePinned)
-        }
         panelCoordinator.onPlacementPreferenceChanged = { [weak store] preference in
             store?.send(.placementPreferenceChanged(preference))
         }
@@ -144,7 +141,6 @@ final class ApplicationRuntime {
 
     private func render(_ state: IslandState) {
         model.isExpanded = state.panelPhase == .expanded || state.panelPhase == .collapsePending
-        model.isPinned = state.isPinned
         model.activeQuotaPage = state.quotaRotation.visibleKind == .fiveHour ? .fiveHour : .weekly
         model.fiveHourQuota = quotaPresentation(state.quotaSnapshot?.fiveHour)
         model.weeklyQuota = quotaPresentation(state.quotaSnapshot?.weekly)
