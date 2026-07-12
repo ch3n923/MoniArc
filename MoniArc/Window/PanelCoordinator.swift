@@ -23,8 +23,8 @@ final class PanelCoordinator: NSObject, PanelDriver {
     private let pointerMonitor = PointerMonitor()
     private var observers: [NSObjectProtocol] = []
     private var hostingView: NSHostingView<IslandView>?
-    private var notchRect: CGRect?
     private var pointerInside = false
+    private var reflectedPanelPhase: PanelPhase = .collapsed
     private var isSessionAvailable = true
     private var activeRevision: UInt64 = 0
     private var reflectedPreference: PlacementPreference
@@ -78,6 +78,7 @@ final class PanelCoordinator: NSObject, PanelDriver {
 
     func reflect(state: IslandState) {
         reflectedPreference = state.placementPreference
+        reflectedPanelPhase = state.panelPhase
         UserDefaults.standard.set(state.placementPreference.rawValue, forKey: Self.placementDefaultsKey)
 
         if state.isAwaitingRehostLayout, let previousLayout = state.panelLayout {
@@ -89,14 +90,12 @@ final class PanelCoordinator: NSObject, PanelDriver {
 
         model.placement = state.resolvedPlacement
         if let layout = state.panelLayout {
-            notchRect = layout.notchFrame.map(CGRect.init)
-            let notchWidth = notchRect?.width ?? 0
+            let notchWidth = layout.notchFrame.map(CGRect.init)?.width ?? 0
             model.physicalNotchWidth = notchWidth
             model.usesWingLayout = layout.placement == .overlay
                 && notchWidth > 0
                 && (PanelGeometry.islandWidth - notchWidth) / 2 >= PanelGeometry.minimumWingWidth
         } else {
-            notchRect = nil
             model.physicalNotchWidth = 0
             model.usesWingLayout = false
         }
@@ -171,8 +170,12 @@ final class PanelCoordinator: NSObject, PanelDriver {
 
     private func updatePointerState(at location: CGPoint) {
         guard isSessionAvailable else { return }
-        let isInside = PointerHitTesting.contains(location, in: panel.frame)
-            || notchRect.map { PointerHitTesting.contains(location, in: $0) } == true
+        let hoverRegion = PointerHitTesting.hoverRegion(
+            panelFrame: panel.frame,
+            placement: model.placement,
+            phase: reflectedPanelPhase
+        )
+        let isInside = PointerHitTesting.contains(location, in: hoverRegion)
         guard isInside != pointerInside else { return }
         pointerInside = isInside
         onHoverChanged?(isInside)
@@ -229,7 +232,6 @@ final class PanelCoordinator: NSObject, PanelDriver {
         menu.autoenablesItems = false
 
         for (title, preference) in [
-            ("自动", PlacementPreference.automatic),
             ("覆盖", PlacementPreference.overlay),
             ("悬浮", PlacementPreference.floating)
         ] {
@@ -257,9 +259,14 @@ final class PanelCoordinator: NSObject, PanelDriver {
         glowItem.submenu = glowMenu
         menu.addItem(glowItem)
         menu.addItem(.separator())
-        let refresh = NSMenuItem(title: "立即刷新额度", action: #selector(refreshQuota), keyEquivalent: "r")
-        refresh.target = self
-        menu.addItem(refresh)
+
+        let github = NSMenuItem(
+            title: "GitHub 地址",
+            action: #selector(openGitHubRepository),
+            keyEquivalent: ""
+        )
+        github.target = self
+        menu.addItem(github)
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "退出 MoniArc", action: #selector(quitApplication), keyEquivalent: "q")
         quit.target = self
@@ -281,8 +288,8 @@ final class PanelCoordinator: NSObject, PanelDriver {
         UserDefaults.standard.set(style.rawValue, forKey: Self.borderGlowDefaultsKey)
     }
 
-    @objc private func refreshQuota() {
-        onRefreshQuota?()
+    @objc private func openGitHubRepository() {
+        NSWorkspace.shared.open(URL(string: "https://github.com/ch3n923/MoniArc")!)
     }
 
     @objc private func quitApplication() {

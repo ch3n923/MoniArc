@@ -5,7 +5,7 @@ final class ApplicationMetadataTests: XCTestCase {
     func testReleaseIdentityMetadata() throws {
         let info = try XCTUnwrap(Bundle.main.infoDictionary)
 
-        XCTAssertEqual(Bundle.main.bundleIdentifier, "com.zhengzipeng.MoniArc")
+        XCTAssertEqual(Bundle.main.bundleIdentifier, "com.moniarc.MoniArc")
         XCTAssertEqual(info["CFBundleName"] as? String, "MoniArc")
         let version = try XCTUnwrap(info["CFBundleShortVersionString"] as? String)
         let build = try XCTUnwrap(info["CFBundleVersion"] as? String)

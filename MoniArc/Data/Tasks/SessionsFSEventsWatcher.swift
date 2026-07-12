@@ -16,7 +16,7 @@ final class SessionsFSEventsWatcher: @unchecked Sendable {
         }
     }
 
-    private let queue = DispatchQueue(label: "com.zhengzipeng.moniarc.task-fsevents")
+    private let queue = DispatchQueue(label: "com.moniarc.task-fsevents")
     private let callbackBox: CallbackBox
     private var stream: FSEventStreamRef?
 

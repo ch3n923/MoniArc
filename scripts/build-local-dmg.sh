@@ -50,7 +50,7 @@ ditto "$app_path" "$stage/MoniArc.app"
 ln -s /Applications "$stage/Applications"
 test -d "$stage/MoniArc.app"
 test -L "$stage/Applications"
-test "$(plutil -extract CFBundleIdentifier raw "$stage/MoniArc.app/Contents/Info.plist")" = "com.zhengzipeng.MoniArc"
+test "$(plutil -extract CFBundleIdentifier raw "$stage/MoniArc.app/Contents/Info.plist")" = "com.moniarc.MoniArc"
 codesign --verify --deep --strict --verbose=2 "$stage/MoniArc.app"
 hdiutil create \
   -volname "MoniArc Preview" \

@@ -505,7 +505,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zhengzipeng.MoniArcTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.moniarc.MoniArcTests;
 				SDKROOT = macosx;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MoniArc.app/Contents/MacOS/MoniArc";
 			};
@@ -591,7 +591,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zhengzipeng.MoniArcTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.moniarc.MoniArcTests;
 				SDKROOT = macosx;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MoniArc.app/Contents/MacOS/MoniArc";
 			};
@@ -609,7 +609,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zhengzipeng.MoniArc;
+				PRODUCT_BUNDLE_IDENTIFIER = com.moniarc.MoniArc;
 				PRODUCT_MODULE_NAME = MoniArc;
 				PRODUCT_NAME = MoniArc;
 				SDKROOT = macosx;
@@ -690,7 +690,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zhengzipeng.MoniArc;
+				PRODUCT_BUNDLE_IDENTIFIER = com.moniarc.MoniArc;
 				PRODUCT_MODULE_NAME = MoniArc;
 				PRODUCT_NAME = MoniArc;
 				SDKROOT = macosx;

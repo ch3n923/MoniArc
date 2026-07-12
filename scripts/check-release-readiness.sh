@@ -8,11 +8,9 @@ required_files=(
   LICENSE
   PRIVACY.md
   NOTICE.md
-  CONTRIBUTING.md
   SECURITY.md
   CHANGELOG.md
   README.md
-  docs/DISTRIBUTION.md
   MoniArc/PrivacyInfo.xcprivacy
   scripts/build-local-dmg.sh
   scripts/build-release.sh
@@ -85,7 +83,7 @@ assert_setting() {
 }
 
 assert_setting PRODUCT_NAME MoniArc
-assert_setting PRODUCT_BUNDLE_IDENTIFIER com.zhengzipeng.MoniArc
+assert_setting PRODUCT_BUNDLE_IDENTIFIER com.moniarc.MoniArc
 assert_setting ENABLE_HARDENED_RUNTIME YES
 assert_setting ENABLE_APP_SANDBOX NO
 

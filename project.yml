@@ -1,6 +1,6 @@
 name: MoniArc
 options:
-  bundleIdPrefix: com.zhengzipeng
+  bundleIdPrefix: com.moniarc
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
@@ -25,7 +25,7 @@ targets:
           - "**/.DS_Store"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.zhengzipeng.MoniArc
+        PRODUCT_BUNDLE_IDENTIFIER: com.moniarc.MoniArc
         PRODUCT_NAME: MoniArc
         PRODUCT_MODULE_NAME: MoniArc
         INFOPLIST_FILE: MoniArc/Info.plist
@@ -48,7 +48,7 @@ targets:
       - target: MoniArc
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.zhengzipeng.MoniArcTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.moniarc.MoniArcTests
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/MoniArc.app/Contents/MacOS/MoniArc"
         BUNDLE_LOADER: "$(TEST_HOST)"

@@ -28,7 +28,7 @@ JSONL 原始字节只在扫描期间短暂存在内存。MoniArc 不直接打开
 ## 用户控制
 
 - 随时退出 MoniArc 即可停止观察。
-- 删除 MoniArc 后，可在 `~/Library/Preferences/com.zhengzipeng.MoniArc.plist` 删除本地偏好。
+- 删除 MoniArc 后，可在 `~/Library/Preferences/com.moniarc.MoniArc.plist` 删除本地偏好。
 - MoniArc 不修改 `~/.codex`；卸载 MoniArc 不会删除 Codex 数据。
 
 ## 第三方服务

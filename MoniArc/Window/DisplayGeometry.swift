@@ -141,6 +141,49 @@ struct PanelGeometry: Equatable, Sendable {
 }
 
 enum PointerHitTesting {
+    /// Keep the collapsed activation target slightly inside the visible island.
+    /// The panel itself includes a large transparent glow margin, which should
+    /// never open the island just because the pointer crossed it.
+    static let collapsedHorizontalInset: CGFloat = 8
+    static let collapsedVerticalInset: CGFloat = 3
+
+    static func hoverRegion(
+        panelFrame: CGRect,
+        placement: PanelPlacement,
+        phase: PanelPhase
+    ) -> CGRect {
+        let isExpanded = phase == .expanded || phase == .collapsePending
+        let surfaceHeight: CGFloat
+        switch (placement, isExpanded) {
+        case (.overlay, true):
+            surfaceHeight = PanelGeometry.overlayExpandedHeight
+        case (.overlay, false):
+            surfaceHeight = min(PanelGeometry.overlayCollapsedWindowHeight, panelFrame.height)
+        case (.floating, true):
+            surfaceHeight = PanelGeometry.floatingExpandedHeight
+        case (.floating, false):
+            surfaceHeight = PanelGeometry.collapsedHeight
+        }
+
+        let surfaceMaxY = placement == .floating
+            ? panelFrame.maxY - PanelGeometry.glowOutset
+            : panelFrame.maxY
+        var region = CGRect(
+            x: panelFrame.midX - PanelGeometry.islandWidth / 2,
+            y: surfaceMaxY - surfaceHeight,
+            width: PanelGeometry.islandWidth,
+            height: surfaceHeight
+        )
+
+        if !isExpanded {
+            region = region.insetBy(
+                dx: collapsedHorizontalInset,
+                dy: collapsedVerticalInset
+            )
+        }
+        return region
+    }
+
     /// NSEvent.mouseLocation can land exactly on a screen's maxY. CGRect.contains
     /// uses a half-open upper bound, so use a closed interval and tolerate a
     /// tiny logical overshoot at the top edge.

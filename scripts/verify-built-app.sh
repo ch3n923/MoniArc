@@ -27,7 +27,7 @@ assert_plist_value() {
 }
 
 assert_plist_value CFBundleName MoniArc
-assert_plist_value CFBundleIdentifier com.zhengzipeng.MoniArc
+assert_plist_value CFBundleIdentifier com.moniarc.MoniArc
 assert_plist_value LSUIElement true
 
 marketing_version="$(plutil -extract CFBundleShortVersionString raw "$info")"

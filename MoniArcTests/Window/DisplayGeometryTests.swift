@@ -64,6 +64,43 @@ final class DisplayGeometryTests: XCTestCase {
         XCTAssertFalse(PointerHitTesting.contains(CGPoint(x: rect.maxX + 0.5, y: rect.maxY), in: rect))
     }
 
+    func testCollapsedOverlayHoverRegionExcludesGlowAndInsetsVisibleSurface() {
+        let panelFrame = CGRect(x: 576, y: 920, width: 360, height: 62)
+
+        let region = PointerHitTesting.hoverRegion(
+            panelFrame: panelFrame,
+            placement: .overlay,
+            phase: .collapsed
+        )
+
+        XCTAssertEqual(region, CGRect(x: 612, y: 951, width: 288, height: 28))
+        XCTAssertFalse(PointerHitTesting.contains(CGPoint(x: region.midX, y: panelFrame.minY), in: region))
+    }
+
+    func testCollapsedFloatingHoverRegionTracksVisibleSurfaceInsideBothGlowMargins() {
+        let panelFrame = CGRect(x: 576, y: 861, width: 360, height: 88)
+
+        let region = PointerHitTesting.hoverRegion(
+            panelFrame: panelFrame,
+            placement: .floating,
+            phase: .expandPending
+        )
+
+        XCTAssertEqual(region, CGRect(x: 612, y: 892, width: 288, height: 26))
+    }
+
+    func testExpandedHoverRegionKeepsTheWholeInteractiveSurfaceAvailable() {
+        let panelFrame = CGRect(x: 576, y: 814, width: 360, height: 168)
+
+        let region = PointerHitTesting.hoverRegion(
+            panelFrame: panelFrame,
+            placement: .overlay,
+            phase: .expanded
+        )
+
+        XCTAssertEqual(region, CGRect(x: 604, y: 842, width: 304, height: 140))
+    }
+
     private func snapshot(notchWidth: CGFloat?) -> DisplaySnapshot {
         let frame = CGRect(x: 0, y: 0, width: 1512, height: 982)
         if let notchWidth {
