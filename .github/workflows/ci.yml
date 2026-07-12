@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Validate release metadata and scripts
+        run: ./scripts/check-release-readiness.sh
+      - name: Run tests
+        run: |
+          xcodebuild -project MoniArc.xcodeproj \
+            -scheme MoniArc \
+            -destination 'platform=macOS' \
+            test CODE_SIGNING_ALLOWED=NO
+      - name: Build release configuration
+        run: |
+          xcodebuild -project MoniArc.xcodeproj \
+            -scheme MoniArc \
+            -configuration Release \
+            -derivedDataPath build/CIRelease \
+            build CODE_SIGNING_ALLOWED=NO
+          ./scripts/verify-built-app.sh \
+            build/CIRelease/Build/Products/Release/MoniArc.app

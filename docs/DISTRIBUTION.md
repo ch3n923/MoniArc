@@ -1,0 +1,76 @@
+# MoniArc 官网直发流程
+
+MoniArc 采用 Developer ID 官网直发，不提交 Mac App Store。正式发布包必须启用 Hardened Runtime、使用 Developer ID Application 证书签名，并通过 Apple 公证。
+
+## 无凭证的本地 DMG 检查
+
+开发阶段可以在不访问 Apple 账号的情况下验证 Release App、DMG 目录和 Applications 快捷方式：
+
+```sh
+./scripts/build-local-dmg.sh
+```
+
+生成的文件名包含 `unsigned-preview`，App 只使用临时 ad-hoc 签名并启用 Hardened Runtime，只能用于本机结构检查，不得上传或分发。
+
+## 一次性准备
+
+1. 加入 Apple Developer Program。
+2. 在 Xcode 登录开发者账号，并创建或下载 `Developer ID Application` 证书。
+3. 在 Apple Developer 网站或 Xcode 中确认 Bundle ID `com.zhengzipeng.MoniArc` 属于发布团队。
+4. 为 `notarytool` 保存凭证：
+
+```sh
+xcrun notarytool store-credentials MoniArcNotary \
+  --apple-id "你的 Apple ID" \
+  --team-id "你的 Team ID" \
+  --password "App 专用密码"
+```
+
+凭证会保存在 macOS 钥匙串中，不应写入仓库。
+
+## 构建、公证与生成 DMG
+
+先运行不会访问 Apple 账号的本地发布检查：
+
+```sh
+./scripts/check-release-readiness.sh
+```
+
+再生成正式签名包：
+
+```sh
+cd MoniArc
+DEVELOPMENT_TEAM="你的 Team ID" \
+NOTARY_PROFILE="MoniArcNotary" \
+./scripts/build-release.sh
+```
+
+成功后，发布文件位于 `build/MoniArc-<版本>.dmg`。
+DMG 内含 `MoniArc.app` 与 Applications 快捷方式，同时会生成对应的 `.sha256` 校验文件。
+
+## 发布前验证
+
+```sh
+./scripts/verify-release.sh build/MoniArc-<版本>.dmg
+```
+
+还应在一台没有 Xcode、没有本项目源码的干净 Mac 上验证：
+
+- DMG 能正常打开，App 可拖入 Applications；
+- Gatekeeper 第一次启动不出现“开发者无法验证”；
+- 未安装 Codex 时能安全显示断开状态；
+- 安装并登录 Codex 后能显示额度与任务状态；
+- 退出 MoniArc 后没有残留后台进程；
+- 官网下载文件的 SHA-256 与 GitHub Release 一致。
+
+## 发布清单
+
+- 更新 `MARKETING_VERSION` 与 `CURRENT_PROJECT_VERSION`；
+- 更新 `CHANGELOG.md`；
+- 运行完整测试；
+- 生成并验证公证 DMG；
+- 计算 `shasum -a 256`；
+- 创建 Git tag 与 GitHub Release；
+- 将 DMG 和校验值添加到 Release；
+- 官网下载按钮指向该 GitHub Release 资源；
+- 在两台不同 Mac 上完成安装与升级回归测试。

@@ -1,0 +1,49 @@
+name: Bug report
+description: 报告可复现的 MoniArc 问题
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请移除用户名、项目路径、任务标题、提示词、代码、token 和真实 `~/.codex` 内容。
+  - type: input
+    id: version
+    attributes:
+      label: MoniArc 版本
+      placeholder: 例如 1.0.0 (1)
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 运行环境
+      placeholder: 例如 macOS 14.6、M2 MacBook Air、Codex App
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 使用不包含隐私信息的最小步骤。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私确认
+      options:
+        - label: 我已确认内容不含凭证、代码、提示词或真实会话数据。
+          required: true

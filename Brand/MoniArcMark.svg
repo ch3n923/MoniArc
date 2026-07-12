@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="ring" x1="160" y1="800" x2="800" y2="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2855FF"/>
+      <stop offset="0.7" stop-color="#42A5FF"/>
+      <stop offset="1" stop-color="#EAFBFF"/>
+    </linearGradient>
+    <linearGradient id="signal" x1="690" y1="190" x2="840" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#EAFBFF"/>
+      <stop offset="0.38" stop-color="#35E4FF"/>
+      <stop offset="1" stop-color="#42A5FF"/>
+    </linearGradient>
+    <filter id="halo" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+    <filter id="signalHalo" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="27"/>
+    </filter>
+  </defs>
+  <circle cx="512" cy="512" r="350" fill="none" stroke="#168CFF" stroke-opacity=".18" stroke-width="24" filter="url(#halo)"/>
+  <circle cx="512" cy="512" r="350" fill="none" stroke="url(#ring)" stroke-width="8" stroke-linecap="round" pathLength="100" stroke-dasharray="88 12" transform="rotate(50 512 512)"/>
+  <circle cx="512" cy="512" r="350" fill="none" stroke="#35E4FF" stroke-opacity=".42" stroke-width="32" stroke-linecap="round" pathLength="100" stroke-dasharray="8.5 91.5" transform="rotate(-43 512 512)" filter="url(#signalHalo)"/>
+  <circle cx="512" cy="512" r="350" fill="none" stroke="url(#signal)" stroke-width="15" stroke-linecap="round" pathLength="100" stroke-dasharray="8.5 91.5" transform="rotate(-43 512 512)"/>
+</svg>
