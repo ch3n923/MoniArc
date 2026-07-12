@@ -224,7 +224,10 @@ struct IslandView: View {
 
     private func collapsedResetText(_ quota: QuotaPresentation) -> String {
         guard let date = quota.resetsAt else {
-            return model.quotaSourceMessage ?? "连接中"
+            if quota.isAvailable {
+                return quota.isStale ? "额度旧值" : "重置时间未知"
+            }
+            return model.quotaSourceMessage ?? "暂不可用"
         }
         return date.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits)) + " 刷新"
     }
@@ -236,8 +239,23 @@ struct IslandView: View {
     }
 
     private func wingResetValue(_ quota: QuotaPresentation) -> String {
-        guard let date = quota.resetsAt else { return "断连" }
+        guard let date = quota.resetsAt else {
+            if quota.isAvailable {
+                return quota.isStale ? "旧值" : "待刷新"
+            }
+            return compactQuotaSourceMessage
+        }
         return Self.timeFormatter.string(from: date)
+    }
+
+    private var compactQuotaSourceMessage: String {
+        switch model.quotaSourceMessage {
+        case "正在连接": "连接中"
+        case "额度断开": "断连"
+        case "协议不兼容": "不兼容"
+        case "额度旧值": "旧值"
+        default: "暂无"
+        }
     }
 
     private var accessibilitySummary: String {
@@ -317,7 +335,8 @@ private struct QuotaDetailRow: View {
     }
 
     private var detailResetText: String {
-        guard let reset = quota.resetsAt else { return quota.isStale ? "旧值" : "连接中" }
+        guard quota.isAvailable else { return "暂不可用" }
+        guard let reset = quota.resetsAt else { return quota.isStale ? "旧值" : "重置时间未知" }
         let value = Self.detailDateFormatter.string(from: reset)
         return quota.isStale ? "旧 · \(value)" : value
     }

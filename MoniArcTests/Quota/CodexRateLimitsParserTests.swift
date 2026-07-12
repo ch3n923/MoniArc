@@ -219,3 +219,40 @@ final class CodexRateLimitsParserTests: XCTestCase {
         )
     }
 }
+
+@MainActor
+final class IslandViewModelQuotaSelectionTests: XCTestCase {
+    func testWeeklyOnlyQuotaSelectsWeeklyPage() {
+        let model = IslandViewModel()
+        model.activeQuotaPage = .fiveHour
+        model.fiveHourQuota = .unavailable
+        model.weeklyQuota = QuotaPresentation(
+            remainingPercent: 68,
+            resetsAt: nil,
+            isStale: false
+        )
+
+        model.normalizeActiveQuotaPage()
+
+        XCTAssertEqual(model.activeQuotaPage, .weekly)
+    }
+
+    func testBothAvailablePreservesRotationSelection() {
+        let model = IslandViewModel()
+        model.activeQuotaPage = .fiveHour
+        model.fiveHourQuota = QuotaPresentation(
+            remainingPercent: 80,
+            resetsAt: nil,
+            isStale: false
+        )
+        model.weeklyQuota = QuotaPresentation(
+            remainingPercent: 68,
+            resetsAt: nil,
+            isStale: false
+        )
+
+        model.normalizeActiveQuotaPage()
+
+        XCTAssertEqual(model.activeQuotaPage, .fiveHour)
+    }
+}
