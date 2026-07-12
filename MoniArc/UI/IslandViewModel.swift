@@ -8,6 +8,10 @@ struct QuotaPresentation: Equatable, Sendable {
     var isStale: Bool
 
     static let unavailable = QuotaPresentation(remainingPercent: nil, resetsAt: nil, isStale: true)
+
+    var isAvailable: Bool {
+        remainingPercent != nil
+    }
 }
 
 struct IslandTaskPresentation: Identifiable, Equatable, Sendable {
@@ -92,6 +96,19 @@ final class IslandViewModel: ObservableObject {
 
     func normalizeQuotaBucketSelection() {
         selectedQuotaBucketIndex = min(max(selectedQuotaBucketIndex, 0), quotaBucketCount - 1)
+    }
+
+    /// Keeps the collapsed island on a window that the Codex server actually returned.
+    /// Some accounts currently expose only the weekly window, which is not a disconnect.
+    func normalizeActiveQuotaPage() {
+        switch activeQuotaPage {
+        case .fiveHour where !fiveHourQuota.isAvailable && weeklyQuota.isAvailable:
+            activeQuotaPage = .weekly
+        case .weekly where !weeklyQuota.isAvailable && fiveHourQuota.isAvailable:
+            activeQuotaPage = .fiveHour
+        default:
+            break
+        }
     }
 
     func selectPreviousQuotaBucket() {
