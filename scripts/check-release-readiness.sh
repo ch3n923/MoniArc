@@ -15,7 +15,9 @@ required_files=(
   docs/DISTRIBUTION.md
   MoniArc/PrivacyInfo.xcprivacy
   scripts/build-local-dmg.sh
+  scripts/build-release.sh
   scripts/verify-built-app.sh
+  scripts/verify-release.sh
   .github/workflows/ci.yml
   .github/ISSUE_TEMPLATE/bug_report.yml
   .github/ISSUE_TEMPLATE/feature_request.yml
@@ -29,12 +31,41 @@ for path in "${required_files[@]}"; do
   fi
 done
 
+for script in scripts/*.sh; do
+  if [[ ! -x "$script" ]]; then
+    echo "Release script is not executable: $script" >&2
+    exit 3
+  fi
+done
+
 plutil -lint MoniArc/Info.plist >/dev/null
 plutil -lint MoniArc/PrivacyInfo.xcprivacy >/dev/null
 bash -n scripts/build-local-dmg.sh scripts/build-release.sh scripts/verify-built-app.sh scripts/verify-release.sh
-xcodegen generate >/dev/null
 
-settings="$(xcodebuild -project MoniArc.xcodeproj -scheme MoniArc -configuration Release -showBuildSettings 2>/dev/null)"
+privacy_api="$(/usr/libexec/PlistBuddy -c 'Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPIType' MoniArc/PrivacyInfo.xcprivacy)"
+privacy_reason="$(/usr/libexec/PlistBuddy -c 'Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPITypeReasons:0' MoniArc/PrivacyInfo.xcprivacy)"
+if [[ "$privacy_api" != "NSPrivacyAccessedAPICategoryUserDefaults" || "$privacy_reason" != "CA92.1" ]]; then
+  echo "Privacy manifest is missing the app-only UserDefaults reason CA92.1." >&2
+  exit 3
+fi
+
+generated_root="$(mktemp -d "${TMPDIR:-/tmp}/MoniArc-project-check.XXXXXX")"
+cleanup() {
+  rm -rf "$generated_root"
+}
+trap cleanup EXIT
+
+cp project.yml "$generated_root/project.yml"
+ln -s "$root/MoniArc" "$generated_root/MoniArc"
+ln -s "$root/MoniArcTests" "$generated_root/MoniArcTests"
+xcodegen generate --spec "$generated_root/project.yml" --project "$generated_root" --quiet
+
+if ! cmp -s MoniArc.xcodeproj/project.pbxproj "$generated_root/MoniArc.xcodeproj/project.pbxproj"; then
+  echo "MoniArc.xcodeproj is out of sync with project.yml; run xcodegen generate and commit the result." >&2
+  exit 3
+fi
+
+settings="$(xcodebuild -project "$generated_root/MoniArc.xcodeproj" -scheme MoniArc -configuration Release -showBuildSettings 2>/dev/null)"
 
 assert_setting() {
   local key="$1"

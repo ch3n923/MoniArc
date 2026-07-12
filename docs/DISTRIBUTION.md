@@ -45,8 +45,17 @@ NOTARY_PROFILE="MoniArcNotary" \
 ./scripts/build-release.sh
 ```
 
+脚本会按 Team ID 自动选择唯一的 `Developer ID Application` 身份。如果同一团队存在多个有效身份，请额外设置完整身份名称或证书 SHA-1：
+
+```sh
+DEVELOPER_ID_IDENTITY="Developer ID Application: 你的名称 (TEAMID)" \
+DEVELOPMENT_TEAM="TEAMID" \
+NOTARY_PROFILE="MoniArcNotary" \
+./scripts/build-release.sh
+```
+
 成功后，发布文件位于 `build/MoniArc-<版本>.dmg`。
-DMG 内含 `MoniArc.app` 与 Applications 快捷方式，同时会生成对应的 `.sha256` 校验文件。
+DMG 内含 `MoniArc.app` 与 Applications 快捷方式，同时会生成可直接使用 `shasum -a 256 -c` 验证的相对路径 `.sha256` 文件。脚本结束前会再次验证签名、公证票据、版本、DMG 结构和校验值。
 
 ## 发布前验证
 

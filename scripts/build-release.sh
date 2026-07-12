@@ -13,9 +13,8 @@ fi
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 build_dir="${BUILD_DIR:-$root/build}"
-developer_id_identity="${DEVELOPER_ID_IDENTITY:-Developer ID Application}"
 
-for command in xcodegen xcodebuild codesign xcrun hdiutil ditto; do
+for command in xcodegen xcodebuild codesign xcrun hdiutil ditto security; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "Required command is unavailable: $command" >&2
     exit 2
@@ -23,6 +22,36 @@ for command in xcodegen xcodebuild codesign xcrun hdiutil ditto; do
 done
 
 mkdir -p "$build_dir"
+build_dir="$(cd "$build_dir" && pwd)"
+
+if [[ ! "$DEVELOPMENT_TEAM" =~ ^[A-Z0-9]{10}$ ]]; then
+  echo "DEVELOPMENT_TEAM must be a 10-character Apple Team ID." >&2
+  exit 2
+fi
+
+identities="$(security find-identity -v -p codesigning 2>/dev/null || true)"
+if [[ -n "${DEVELOPER_ID_IDENTITY:-}" ]]; then
+  developer_id_identity="$DEVELOPER_ID_IDENTITY"
+  matching_identities="$(grep -F "$developer_id_identity" <<<"$identities" || true)"
+  matching_identity_count="$(awk 'NF { count += 1 } END { print count + 0 }' <<<"$matching_identities")"
+  if [[ "$matching_identity_count" != "1" ]]; then
+    echo "DEVELOPER_ID_IDENTITY must match exactly one valid local code-signing identity." >&2
+    exit 2
+  fi
+else
+  developer_id_candidates="$(
+    grep -F 'Developer ID Application:' <<<"$identities" \
+      | grep -F "($DEVELOPMENT_TEAM)" || true
+  )"
+  developer_id_count="$(awk 'NF { count += 1 } END { print count + 0 }' <<<"$developer_id_candidates")"
+  if [[ "$developer_id_count" != "1" ]]; then
+    echo "Expected exactly one Developer ID Application identity for team $DEVELOPMENT_TEAM; found $developer_id_count." >&2
+    echo "Set DEVELOPER_ID_IDENTITY explicitly if this Mac has multiple matching identities." >&2
+    exit 2
+  fi
+  developer_id_identity="$(awk 'NF { print $2; exit }' <<<"$developer_id_candidates")"
+fi
+
 work_dir="$(mktemp -d "${TMPDIR:-/tmp}/MoniArc-release.XXXXXX")"
 archive_path="$work_dir/MoniArc.xcarchive"
 app_path="$archive_path/Products/Applications/MoniArc.app"
@@ -37,7 +66,7 @@ trap cleanup EXIT
 
 mkdir -p "$dmg_stage"
 cd "$root"
-xcodegen generate
+"$root/scripts/check-release-readiness.sh"
 
 version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$root/MoniArc/Info.plist" 2>/dev/null || true)"
 if [[ "$version" == '$(MARKETING_VERSION)' || -z "$version" ]]; then
@@ -66,10 +95,20 @@ xcodebuild -project MoniArc.xcodeproj \
 
 codesign --verify --deep --strict --verbose=2 "$app_path"
 "$root/scripts/verify-built-app.sh" "$app_path"
-if ! codesign -dv --verbose=4 "$app_path" 2>&1 | grep 'flags=.*runtime' >/dev/null; then
+app_signature="$(codesign -dv --verbose=4 "$app_path" 2>&1)"
+if ! grep 'flags=.*runtime' <<<"$app_signature" >/dev/null; then
   echo "Release app is missing the Hardened Runtime flag." >&2
   exit 3
 fi
+for expected in \
+  'Authority=Developer ID Application:' \
+  "TeamIdentifier=$DEVELOPMENT_TEAM" \
+  'Timestamp='; do
+  if ! grep -F "$expected" <<<"$app_signature" >/dev/null; then
+    echo "Release app signature is missing: $expected" >&2
+    exit 3
+  fi
+done
 ditto -c -k --keepParent "$app_path" "$submission_zip"
 xcrun notarytool submit "$submission_zip" \
   --keychain-profile "$NOTARY_PROFILE" \
@@ -89,6 +128,16 @@ hdiutil create \
 
 codesign --force --timestamp --sign "$developer_id_identity" "$working_dmg"
 codesign --verify --verbose=2 "$working_dmg"
+dmg_signature="$(codesign -dv --verbose=4 "$working_dmg" 2>&1)"
+for expected in \
+  'Authority=Developer ID Application:' \
+  "TeamIdentifier=$DEVELOPMENT_TEAM" \
+  'Timestamp='; do
+  if ! grep -F "$expected" <<<"$dmg_signature" >/dev/null; then
+    echo "Release DMG signature is missing: $expected" >&2
+    exit 3
+  fi
+done
 xcrun notarytool submit "$working_dmg" \
   --keychain-profile "$NOTARY_PROFILE" \
   --wait
@@ -97,7 +146,12 @@ xcrun stapler validate "$working_dmg"
 spctl --assess --type open --context context:primary-signature --verbose=4 "$working_dmg"
 
 ditto "$working_dmg" "$dmg_path"
-shasum -a 256 "$dmg_path" | tee "$checksums_path"
+(
+  cd "$build_dir"
+  shasum -a 256 "$(basename "$dmg_path")" >"$(basename "$checksums_path")"
+)
+cat "$checksums_path"
+"$root/scripts/verify-release.sh" "$dmg_path"
 
 echo "Release artifact: $dmg_path"
 echo "Checksum file: $checksums_path"

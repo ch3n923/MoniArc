@@ -43,6 +43,21 @@ fi
 
 plutil -lint "$privacy_manifest" >/dev/null
 
+privacy_api="$(/usr/libexec/PlistBuddy -c 'Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPIType' "$privacy_manifest")"
+privacy_reason="$(/usr/libexec/PlistBuddy -c 'Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPITypeReasons:0' "$privacy_manifest")"
+if [[ "$privacy_api" != "NSPrivacyAccessedAPICategoryUserDefaults" || "$privacy_reason" != "CA92.1" ]]; then
+  echo "Privacy manifest is missing the app-only UserDefaults reason CA92.1." >&2
+  exit 3
+fi
+
+architectures="$(lipo -archs "$binary")"
+for architecture in arm64 x86_64; do
+  if ! grep -qw "$architecture" <<<"$architectures"; then
+    echo "Release binary is missing required architecture: $architecture" >&2
+    exit 3
+  fi
+done
+
 if find "$app" -type d -name '*.xctest' -print -quit | grep -q .; then
   echo "Release app unexpectedly contains a test bundle." >&2
   exit 4

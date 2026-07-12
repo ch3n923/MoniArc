@@ -18,7 +18,7 @@ final class ApplicationMetadataTests: XCTestCase {
         )
     }
 
-    func testBundledPrivacyManifestDeclaresNoCollectionOrTracking() throws {
+    func testBundledPrivacyManifestDeclaresNoCollectionTrackingAndAppOnlyDefaults() throws {
         let url = try XCTUnwrap(
             Bundle.main.url(forResource: "PrivacyInfo", withExtension: "xcprivacy")
         )
@@ -29,6 +29,19 @@ final class ApplicationMetadataTests: XCTestCase {
         XCTAssertEqual(manifest["NSPrivacyTracking"] as? Bool, false)
         XCTAssertEqual(manifest["NSPrivacyTrackingDomains"] as? [String], [])
         XCTAssertTrue(try XCTUnwrap(manifest["NSPrivacyCollectedDataTypes"] as? [Any]).isEmpty)
-        XCTAssertTrue(try XCTUnwrap(manifest["NSPrivacyAccessedAPITypes"] as? [Any]).isEmpty)
+
+        let accessedAPIs = try XCTUnwrap(
+            manifest["NSPrivacyAccessedAPITypes"] as? [[String: Any]]
+        )
+        XCTAssertEqual(accessedAPIs.count, 1)
+        let userDefaults = try XCTUnwrap(accessedAPIs.first)
+        XCTAssertEqual(
+            userDefaults["NSPrivacyAccessedAPIType"] as? String,
+            "NSPrivacyAccessedAPICategoryUserDefaults"
+        )
+        XCTAssertEqual(
+            userDefaults["NSPrivacyAccessedAPITypeReasons"] as? [String],
+            ["CA92.1"]
+        )
     }
 }
