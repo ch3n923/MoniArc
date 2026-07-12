@@ -65,6 +65,11 @@ open -n '/tmp/MoniArcDerivedData/Build/Products/Debug/MoniArc.app' \
   --args --harness
 ```
 
+## Creator
+
+- Xiaohongshu: **HIGHNOON 正午**
+- Xiaohongshu ID: `dxzico23`
+
 ## License
 
 MoniArc is released under the [MIT License](LICENSE).

@@ -65,6 +65,11 @@ open -n '/tmp/MoniArcDerivedData/Build/Products/Debug/MoniArc.app' \
   --args --harness
 ```
 
+## 作者
+
+- 小红书：**HIGHNOON 正午**
+- 小红书号：`dxzico23`
+
 ## 许可
 
 MoniArc 采用 [MIT License](LICENSE) 开源。
