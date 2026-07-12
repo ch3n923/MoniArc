@@ -17,15 +17,49 @@ cleanup() {
 }
 trap cleanup EXIT
 
+verify_developer_id_signature() {
+  local label="$1"
+  local signature="$2"
+  local expected_team="${3:-}"
+  local team_count
+  local team
+  local authority_count
+  local timestamp_count
+  local timestamp
+
+  team_count="$(/usr/bin/grep -c '^TeamIdentifier=' <<<"$signature" || true)"
+  team="$(sed -n 's/^TeamIdentifier=//p' <<<"$signature")"
+  if [[ "$team_count" != "1" || ! "$team" =~ ^[A-Z0-9]{10}$ ]]; then
+    echo "$label signature must contain exactly one valid Apple TeamIdentifier." >&2
+    exit 3
+  fi
+  if [[ -n "$expected_team" && "$team" != "$expected_team" ]]; then
+    echo "$label was signed by team $team, expected $expected_team." >&2
+    exit 3
+  fi
+
+  authority_count="$(/usr/bin/grep -Ec "^Authority=Developer ID Application: .+ \\($team\\)$" <<<"$signature" || true)"
+  timestamp_count="$(/usr/bin/grep -c '^Timestamp=' <<<"$signature" || true)"
+  timestamp="$(sed -n 's/^Timestamp=//p' <<<"$signature")"
+  if [[ "$authority_count" != "1" ]]; then
+    echo "$label is not signed by exactly one Developer ID Application certificate for team $team." >&2
+    exit 3
+  fi
+  if [[ "$timestamp_count" != "1" || -z "$timestamp" || "$timestamp" == "none" ]]; then
+    echo "$label is missing a trusted signing timestamp." >&2
+    exit 3
+  fi
+
+  printf '%s\n' "$team"
+}
+
 case "$artifact" in
   *.app)
     codesign --verify --deep --strict --verbose=2 "$artifact"
     "$root/scripts/verify-built-app.sh" "$artifact"
     signature="$(codesign -dv --verbose=4 "$artifact" 2>&1)"
     grep 'flags=.*runtime' <<<"$signature" >/dev/null
-    grep -F 'Authority=Developer ID Application:' <<<"$signature" >/dev/null
-    grep -F 'Timestamp=' <<<"$signature" >/dev/null
-    grep -F 'TeamIdentifier=' <<<"$signature" >/dev/null
+    verify_developer_id_signature "Release app" "$signature" >/dev/null
     spctl --assess --type execute --verbose=4 "$artifact"
     xcrun stapler validate "$artifact"
     ;;
@@ -33,13 +67,7 @@ case "$artifact" in
     hdiutil verify "$artifact"
     codesign --verify --verbose=2 "$artifact"
     signature="$(codesign -dv --verbose=4 "$artifact" 2>&1)"
-    grep -F 'Authority=Developer ID Application:' <<<"$signature" >/dev/null
-    grep -F 'Timestamp=' <<<"$signature" >/dev/null
-    dmg_team="$(sed -n 's/^TeamIdentifier=//p' <<<"$signature")"
-    if [[ -z "$dmg_team" ]]; then
-      echo "Release DMG signature has no TeamIdentifier." >&2
-      exit 3
-    fi
+    dmg_team="$(verify_developer_id_signature "Release DMG" "$signature")"
     spctl --assess --type open --context context:primary-signature --verbose=4 "$artifact"
     xcrun stapler validate "$artifact"
 
@@ -63,13 +91,7 @@ case "$artifact" in
     "$root/scripts/verify-built-app.sh" "$mount_point/MoniArc.app"
     app_signature="$(codesign -dv --verbose=4 "$mount_point/MoniArc.app" 2>&1)"
     grep 'flags=.*runtime' <<<"$app_signature" >/dev/null
-    grep -F 'Authority=Developer ID Application:' <<<"$app_signature" >/dev/null
-    grep -F 'Timestamp=' <<<"$app_signature" >/dev/null
-    app_team="$(sed -n 's/^TeamIdentifier=//p' <<<"$app_signature")"
-    if [[ "$app_team" != "$dmg_team" ]]; then
-      echo "App and DMG were signed by different teams." >&2
-      exit 3
-    fi
+    verify_developer_id_signature "Bundled app" "$app_signature" "$dmg_team" >/dev/null
     spctl --assess --type execute --verbose=4 "$mount_point/MoniArc.app"
     xcrun stapler validate "$mount_point/MoniArc.app"
 

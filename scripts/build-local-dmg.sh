@@ -25,7 +25,7 @@ trap cleanup EXIT
 
 mkdir -p "$stage"
 cd "$root"
-xcodegen generate >/dev/null
+"$root/scripts/check-release-readiness.sh"
 xcodebuild -quiet \
   -project MoniArc.xcodeproj \
   -scheme MoniArc \

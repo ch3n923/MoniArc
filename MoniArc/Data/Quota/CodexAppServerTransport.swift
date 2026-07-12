@@ -18,6 +18,7 @@ actor CodexAppServerTransport {
     }
 
     private let executableURL: URL
+    private let arguments: [String]
     private let environment: [String: String]
     private let requestTimeout: Duration
     private let maximumBufferedBytes = 4 * 1_024 * 1_024
@@ -34,12 +35,12 @@ actor CodexAppServerTransport {
     private var isStopping = false
 
     init(
-        executableURL: URL,
-        environment: [String: String],
+        launchPlan: CodexLaunchPlan,
         requestTimeout: Duration
     ) {
-        self.executableURL = executableURL
-        self.environment = environment
+        executableURL = launchPlan.executableURL
+        arguments = launchPlan.arguments
+        environment = launchPlan.environment
         self.requestTimeout = requestTimeout
     }
 
@@ -62,7 +63,7 @@ actor CodexAppServerTransport {
         let outputPipe = Pipe()
         let errorPipe = Pipe()
         process.executableURL = executableURL
-        process.arguments = ["app-server", "--stdio"]
+        process.arguments = arguments
         process.environment = environment
         process.standardInput = inputPipe
         process.standardOutput = outputPipe

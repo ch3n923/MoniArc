@@ -69,7 +69,7 @@ actor CodexAppServerQuotaSource: QuotaSource {
         var retryIndex = 0
 
         while isStarted, !Task.isCancelled {
-            guard let executableURL = CodexBinaryResolver.resolve(
+            guard let launchPlan = CodexLaunchPlanner.make(
                 override: configuration.binaryOverride,
                 environment: configuration.environment
             ) else {
@@ -82,8 +82,7 @@ actor CodexAppServerQuotaSource: QuotaSource {
             connectionGeneration &+= 1
             let generation = connectionGeneration
             let transport = CodexAppServerTransport(
-                executableURL: executableURL,
-                environment: configuration.environment,
+                launchPlan: launchPlan,
                 requestTimeout: configuration.requestTimeout
             )
             activeTransport = transport

@@ -68,12 +68,12 @@ if find "$app" -type f -name '*.debug.dylib' -print -quit | grep -q .; then
   exit 4
 fi
 
-if strings "$binary" | rg 'MoniArc Harness|HarnessController|\+59[.]999s' >/dev/null; then
+if strings "$binary" | /usr/bin/grep -E 'MoniArc Harness|HarnessController|\+59[.]999s' >/dev/null; then
   echo "Release binary unexpectedly contains Debug Harness content." >&2
   exit 5
 fi
 
-if strings "$binary" | rg 'auth[.]json' >/dev/null; then
+if strings "$binary" | /usr/bin/grep -E 'auth[.]json' >/dev/null; then
   echo "Release binary unexpectedly references auth.json." >&2
   exit 5
 fi

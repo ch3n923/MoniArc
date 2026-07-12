@@ -20,6 +20,7 @@
 		2C0762E79E79EBEE055D2288 /* SQLiteTaskCandidateIndexTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE16EE17C5A83F137C285D69 /* SQLiteTaskCandidateIndexTests.swift */; };
 		2DF220537C83450675AF217D /* AppKitScreenProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D60E5574800EB0A12D2CF8B0 /* AppKitScreenProvider.swift */; };
 		3643B73F04E8632D4182AA00 /* CodexBinaryResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1511B36473F8D4845DDBFE23 /* CodexBinaryResolver.swift */; };
+		3E4E048889C3182DF7154E9E /* CodexSubprocessEnvironmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C575C847169EAF28282C5E0A /* CodexSubprocessEnvironmentTests.swift */; };
 		3EB7A368FFE120F18570E10E /* SessionsFSEventsWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB59638FCAFF148F7FA5A7F9 /* SessionsFSEventsWatcher.swift */; };
 		417F7C6A76D965E4EF0A3B98 /* CodexAppServerQuotaSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84AEA8D7A62116BF040C1C74 /* CodexAppServerQuotaSource.swift */; };
 		436EFBBA8FF739178F4B4D67 /* InteractionCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA48B19C44C6A7DEBB661DC /* InteractionCaptureView.swift */; };
@@ -42,6 +43,8 @@
 		B295BBC4406132D36941782D /* JSONLTaskLifecycleScannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6E1D55A82EA2217D69194E9 /* JSONLTaskLifecycleScannerTests.swift */; };
 		BEC5C47CA2B86CAF6EC226BB /* IslandReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADAAEBE0B532627872837A76 /* IslandReducerTests.swift */; };
 		C0910972BC6AD839051BFDBD /* CodexQuotaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9C3A4263BF8AA02B81742B /* CodexQuotaModels.swift */; };
+		C14C1A06BF5BE64BA897C642 /* CodexLaunchPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E6F0DA6DC82B7113C30BED /* CodexLaunchPlan.swift */; };
+		C28D38AC49A327D9BE418467 /* CodexExecutableTrustTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F7C67F1FB94A4502DC1AD8 /* CodexExecutableTrustTests.swift */; };
 		CFE592801CAEC009601AFBE5 /* SQLiteTaskCandidateIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 384D86F7BD8293AC24D88C80 /* SQLiteTaskCandidateIndex.swift */; };
 		D1E72CCC1D004723E3DA2A84 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 242477F4C396D2F8446EDEF2 /* PrivacyInfo.xcprivacy */; };
 		D6C7670E30F98AC3C3AE9815 /* DisplayGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53DBE0ECC3982DDA84D8FF38 /* DisplayGeometry.swift */; };
@@ -73,6 +76,7 @@
 		16B0BF4483142D8D5120EA46 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		242477F4C396D2F8446EDEF2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		2CAF9F4B59319E27B96E565A /* HarnessController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarnessController.swift; sourceTree = "<group>"; };
+		32E6F0DA6DC82B7113C30BED /* CodexLaunchPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLaunchPlan.swift; sourceTree = "<group>"; };
 		384D86F7BD8293AC24D88C80 /* SQLiteTaskCandidateIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteTaskCandidateIndex.swift; sourceTree = "<group>"; };
 		3CF1BB0C6DB93AB456566DB8 /* IslandClocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandClocks.swift; sourceTree = "<group>"; };
 		4EC158C1FB011D69446937CC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -81,6 +85,7 @@
 		59979B416DE3989B016B24F2 /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = System/Library/Frameworks/CoreServices.framework; sourceTree = SDKROOT; };
 		5C947130B82DB8BC4D1CA81D /* IslandView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandView.swift; sourceTree = "<group>"; };
 		5F78096493AE63232F5991EE /* DisplayGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayGeometryTests.swift; sourceTree = "<group>"; };
+		60F7C67F1FB94A4502DC1AD8 /* CodexExecutableTrustTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexExecutableTrustTests.swift; sourceTree = "<group>"; };
 		63AA1B45DEB70E0F8DCF5D87 /* CodexAppServerTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerTransport.swift; sourceTree = "<group>"; };
 		656FB743AA42D730347331FB /* ApplicationMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMetadataTests.swift; sourceTree = "<group>"; };
 		6B088AB801A1205152F080CD /* PointerMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointerMonitor.swift; sourceTree = "<group>"; };
@@ -96,6 +101,7 @@
 		ADAAEBE0B532627872837A76 /* IslandReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandReducerTests.swift; sourceTree = "<group>"; };
 		B20839E0FBA20EF9F8CF7198 /* CodexTaskSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTaskSource.swift; sourceTree = "<group>"; };
 		C307366A984EF14E65833180 /* IslandStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandStore.swift; sourceTree = "<group>"; };
+		C575C847169EAF28282C5E0A /* CodexSubprocessEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexSubprocessEnvironmentTests.swift; sourceTree = "<group>"; };
 		C7A4805DFCF0682D4970B6A1 /* CodexRateLimitsParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRateLimitsParserTests.swift; sourceTree = "<group>"; };
 		CB4D53F3B464BC47AE8C3FF2 /* CodexRateLimitsParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRateLimitsParser.swift; sourceTree = "<group>"; };
 		CD9FDD90E5F6BC40D9D06E22 /* MoniArcApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoniArcApp.swift; sourceTree = "<group>"; };
@@ -215,7 +221,9 @@
 			isa = PBXGroup;
 			children = (
 				D7DD7A289F9CCF6976D6EF9A /* CodexBinaryResolverTests.swift */,
+				60F7C67F1FB94A4502DC1AD8 /* CodexExecutableTrustTests.swift */,
 				C7A4805DFCF0682D4970B6A1 /* CodexRateLimitsParserTests.swift */,
+				C575C847169EAF28282C5E0A /* CodexSubprocessEnvironmentTests.swift */,
 			);
 			path = Quota;
 			sourceTree = "<group>";
@@ -274,6 +282,7 @@
 				84AEA8D7A62116BF040C1C74 /* CodexAppServerQuotaSource.swift */,
 				63AA1B45DEB70E0F8DCF5D87 /* CodexAppServerTransport.swift */,
 				1511B36473F8D4845DDBFE23 /* CodexBinaryResolver.swift */,
+				32E6F0DA6DC82B7113C30BED /* CodexLaunchPlan.swift */,
 				7A9C3A4263BF8AA02B81742B /* CodexQuotaModels.swift */,
 				CB4D53F3B464BC47AE8C3FF2 /* CodexRateLimitsParser.swift */,
 			);
@@ -422,7 +431,9 @@
 			files = (
 				8A35D22C8D316A8B35E30D0C /* ApplicationMetadataTests.swift in Sources */,
 				55626F0D2CE116AB2C2CDD75 /* CodexBinaryResolverTests.swift in Sources */,
+				C28D38AC49A327D9BE418467 /* CodexExecutableTrustTests.swift in Sources */,
 				6C5C7E691A4E7998830B6121 /* CodexRateLimitsParserTests.swift in Sources */,
+				3E4E048889C3182DF7154E9E /* CodexSubprocessEnvironmentTests.swift in Sources */,
 				9BCF798BCBD476E1C9517F2F /* CodexTaskObserverTests.swift in Sources */,
 				E23DC3FC7DC00DAE8C69EC6A /* DisplayGeometryTests.swift in Sources */,
 				A554FED1A49B3E02C642836F /* IslandClockTests.swift in Sources */,
@@ -444,6 +455,7 @@
 				417F7C6A76D965E4EF0A3B98 /* CodexAppServerQuotaSource.swift in Sources */,
 				A20B89E8B4487F06ECC803D9 /* CodexAppServerTransport.swift in Sources */,
 				3643B73F04E8632D4182AA00 /* CodexBinaryResolver.swift in Sources */,
+				C14C1A06BF5BE64BA897C642 /* CodexLaunchPlan.swift in Sources */,
 				C0910972BC6AD839051BFDBD /* CodexQuotaModels.swift in Sources */,
 				1F78D4F945A762670DFB45DB /* CodexRateLimitsParser.swift in Sources */,
 				278B1A39CA871F5673F97915 /* CodexTaskObserver.swift in Sources */,

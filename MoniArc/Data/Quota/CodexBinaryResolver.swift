@@ -1,6 +1,8 @@
 import Foundation
 
 enum CodexBinaryResolver {
+    static let overrideEnvironmentKey = "MONIARC_CODEX_PATH"
+
     static let fixedCandidatePaths = [
         "/Applications/ChatGPT.app/Contents/Resources/codex",
         "/usr/local/bin/codex",
@@ -15,12 +17,19 @@ enum CodexBinaryResolver {
         if let override {
             paths.append(override.path)
         }
+        if let environmentOverride = environment[overrideEnvironmentKey],
+           environmentOverride.hasPrefix("/")
+        {
+            paths.append(environmentOverride)
+        }
         paths.append(contentsOf: fixedCandidatePaths)
 
-        if let path = environment["PATH"] {
-            paths.append(contentsOf: path
+        if let searchPath = environment["PATH"] {
+            paths.append(contentsOf: searchPath
                 .split(separator: ":", omittingEmptySubsequences: true)
-                .map { URL(fileURLWithPath: String($0)).appendingPathComponent("codex").path })
+                .map(String.init)
+                .filter { $0.hasPrefix("/") }
+                .map { URL(fileURLWithPath: $0).appendingPathComponent("codex").path })
         }
 
         var seen: Set<String> = []
@@ -33,9 +42,22 @@ enum CodexBinaryResolver {
     static func resolve(
         override: URL?,
         environment: [String: String],
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        currentUID: UInt32 = UInt32(getuid())
     ) -> URL? {
-        candidateURLs(override: override, environment: environment)
-            .first { fileManager.isExecutableFile(atPath: $0.path) }
+        var canonicalPaths = Set<String>()
+        for candidate in candidateURLs(override: override, environment: environment) {
+            guard let trusted = CodexExecutableTrust.canonicalTrustedURL(
+                for: candidate,
+                fileManager: fileManager,
+                currentUID: currentUID
+            ) else {
+                continue
+            }
+            if canonicalPaths.insert(trusted.path).inserted {
+                return trusted
+            }
+        }
+        return nil
     }
 }

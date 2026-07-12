@@ -18,6 +18,7 @@ required_files=(
   scripts/build-release.sh
   scripts/verify-built-app.sh
   scripts/verify-release.sh
+  MoniArc.xcodeproj/xcshareddata/xcschemes/MoniArc.xcscheme
   .github/workflows/ci.yml
   .github/ISSUE_TEMPLATE/bug_report.yml
   .github/ISSUE_TEMPLATE/feature_request.yml
@@ -40,7 +41,7 @@ done
 
 plutil -lint MoniArc/Info.plist >/dev/null
 plutil -lint MoniArc/PrivacyInfo.xcprivacy >/dev/null
-bash -n scripts/build-local-dmg.sh scripts/build-release.sh scripts/verify-built-app.sh scripts/verify-release.sh
+bash -n scripts/build-local-dmg.sh scripts/build-release.sh scripts/check-release-readiness.sh scripts/verify-built-app.sh scripts/verify-release.sh
 
 privacy_api="$(/usr/libexec/PlistBuddy -c 'Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPIType' MoniArc/PrivacyInfo.xcprivacy)"
 privacy_reason="$(/usr/libexec/PlistBuddy -c 'Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPITypeReasons:0' MoniArc/PrivacyInfo.xcprivacy)"
@@ -62,6 +63,13 @@ xcodegen generate --spec "$generated_root/project.yml" --project "$generated_roo
 
 if ! cmp -s MoniArc.xcodeproj/project.pbxproj "$generated_root/MoniArc.xcodeproj/project.pbxproj"; then
   echo "MoniArc.xcodeproj is out of sync with project.yml; run xcodegen generate and commit the result." >&2
+  exit 3
+fi
+
+shared_scheme="MoniArc.xcodeproj/xcshareddata/xcschemes/MoniArc.xcscheme"
+generated_scheme="$generated_root/$shared_scheme"
+if [[ ! -f "$generated_scheme" ]] || ! cmp -s "$shared_scheme" "$generated_scheme"; then
+  echo "The shared MoniArc scheme is out of sync with project.yml; run xcodegen generate and commit the result." >&2
   exit 3
 fi
 
@@ -92,11 +100,15 @@ if [[ ! "$build_number" =~ ^[1-9][0-9]*$ ]]; then
   exit 4
 fi
 
-if rg -n -i \
-  'codex([_-]| )?(halo|island)' \
-  . \
-  --glob '!MoniArc.xcodeproj/**' \
-  --glob '!scripts/check-release-readiness.sh' >/dev/null; then
+if /usr/bin/grep -rIinE \
+  --exclude-dir=.git \
+  --exclude-dir=.build \
+  --exclude-dir=.swiftpm \
+  --exclude-dir=build \
+  --exclude-dir=DerivedData \
+  --exclude-dir=MoniArc.xcodeproj \
+  --exclude=check-release-readiness.sh \
+  'codex([_-]| )?(halo|island)' . >/dev/null; then
   echo "Legacy product naming remains in the repository." >&2
   exit 5
 fi
