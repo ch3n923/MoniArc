@@ -1,0 +1,17 @@
+.DS_Store
+DerivedData/
+build/
+*.xcarchive
+*.dmg
+*.zip
+xcuserdata/
+*.xcuserstate
+
+# Local credentials and signing material
+.env*
+*.cer
+*.key
+*.mobileprovision
+*.p12
+*.pem
+*.provisionprofile
