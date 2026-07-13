@@ -11,7 +11,7 @@ Built with Swift 6, SwiftUI, and AppKit, it has no third-party runtime dependenc
 ## Features
 
 - Sits over the notch or floats at the top of the display, including on notchless Macs.
-- Shows Codex five-hour and weekly limits, including multiple rate-limit buckets.
+- Shows the Codex quota windows available to the current account, including multiple rate-limit buckets.
 - Observes the local Codex lifecycle in read-only mode: running, waiting for input, failed, idle, or unavailable.
 - Expands on hover and collapses after the pointer leaves; right-click controls placement, glow, and quit.
 - Respects the macOS Reduce Motion setting.

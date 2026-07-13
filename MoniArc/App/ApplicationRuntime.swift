@@ -144,6 +144,7 @@ final class ApplicationRuntime {
         model.activeQuotaPage = state.quotaRotation.visibleKind == .fiveHour ? .fiveHour : .weekly
         model.fiveHourQuota = quotaPresentation(state.quotaSnapshot?.fiveHour)
         model.weeklyQuota = quotaPresentation(state.quotaSnapshot?.weekly)
+        model.normalizeActiveQuotaPage()
         model.additionalQuotas = state.quotaSnapshot?.additionalBuckets.map { bucket in
             AdditionalQuotaPresentation(
                 id: bucket.id,
