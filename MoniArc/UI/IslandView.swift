@@ -11,14 +11,15 @@ struct IslandView: View {
     var body: some View {
         GeometryReader { _ in
             ZStack(alignment: .top) {
-                StatusGlow(
-                    status: model.status,
-                    style: model.borderGlowStyle,
-                    bottomRadius: surfaceShape.bottomRadius,
-                    closesTop: model.placement == .floating,
-                    reduceMotion: reduceMotion
-                )
-                .frame(width: IslandDesign.width, height: visualSurfaceHeight)
+                if !model.usesMetalGlow {
+                    LegacyStatusGlow(
+                        appearance: model.glowAppearance,
+                        bottomRadius: surfaceShape.bottomRadius,
+                        closesTop: model.placement == .floating,
+                        reduceMotion: reduceMotion
+                    )
+                    .frame(width: IslandDesign.width, height: visualSurfaceHeight)
+                }
 
                 ZStack(alignment: .top) {
                     InteractionCaptureView(
@@ -36,15 +37,17 @@ struct IslandView: View {
                     }
                 }
                 .frame(width: IslandDesign.width, height: visualSurfaceHeight, alignment: .top)
-                .background(IslandDesign.surface)
+                .background(model.usesMetalGlow ? Color.clear : IslandDesign.surface)
                 .clipShape(surfaceShape)
 
-                StatusCoreOutline(
-                    status: model.status,
-                    bottomRadius: surfaceShape.bottomRadius,
-                    closesTop: model.placement == .floating
-                )
+                if !model.usesMetalGlow {
+                    StatusCoreOutline(
+                        appearance: model.glowAppearance,
+                        bottomRadius: surfaceShape.bottomRadius,
+                        closesTop: model.placement == .floating
+                    )
                     .frame(width: IslandDesign.width, height: visualSurfaceHeight)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .offset(y: model.placement == .floating ? IslandDesign.glowOutset : 0)
@@ -436,32 +439,22 @@ private struct IslandStatusOutlineShape: Shape {
 }
 
 private struct StatusCoreOutline: View {
-    var status: IslandVisualStatus
+    var appearance: ResolvedGlowAppearance
     var bottomRadius: CGFloat
     var closesTop: Bool
-
-    private var color: Color {
-        switch status {
-        case .idle, .disconnected:
-            IslandDesign.idle
-        case .running, .waitingForUser, .error:
-            IslandDesign.running
-        }
-    }
 
     var body: some View {
         IslandStatusOutlineShape(bottomRadius: bottomRadius, closesTop: closesTop)
             .stroke(
-                color,
+                appearance.glowColor,
                 style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round)
             )
-        .allowsHitTesting(false)
+            .allowsHitTesting(false)
     }
 }
 
-private struct StatusGlow: View {
-    var status: IslandVisualStatus
-    var style: BorderGlowStyle
+private struct LegacyStatusGlow: View {
+    var appearance: ResolvedGlowAppearance
     var bottomRadius: CGFloat
     var closesTop: Bool
     var reduceMotion: Bool
@@ -471,19 +464,9 @@ private struct StatusGlow: View {
             GeometryReader { _ in
                 let seconds = timeline.date.timeIntervalSinceReferenceDate
 
-                switch status {
-                case .running:
-                    runningGlow(seconds: seconds)
-
-                case .waitingForUser:
-                    glowLayers(color: status.color, intensity: 0.55)
-
-                case .error:
-                    let progress = reduceMotion ? 1 : seconds.truncatingRemainder(dividingBy: 2.4) / 2.4
-                    let wave = 0.5 - 0.5 * cos(progress * 2 * .pi)
-                    glowLayers(color: status.color, intensity: 0.45 + 0.37 * wave)
-
-                case .idle, .disconnected:
+                if appearance.isBusy, !reduceMotion {
+                    busyGlow(seconds: seconds)
+                } else {
                     Color.clear
                 }
             }
@@ -492,29 +475,25 @@ private struct StatusGlow: View {
     }
 
     private var shouldAnimate: Bool {
-        guard !reduceMotion else { return false }
-        return status == .error || status == .running
+        appearance.isBusy && !reduceMotion
     }
 
     @ViewBuilder
-    private func runningGlow(seconds: TimeInterval) -> some View {
-        switch style {
+    private func busyGlow(seconds: TimeInterval) -> some View {
+        switch appearance.motion {
         case .breathe:
             let progress = seconds.truncatingRemainder(dividingBy: 2.5) / 2.5
-            let wave = reduceMotion ? 1 : 0.5 - 0.5 * cos(progress * 2 * .pi)
-            // Approved preset: 100% peak, 28% minimum, 2.5s cycle.
-            glowLayers(color: IslandDesign.running, intensity: 0.28 + 0.72 * wave)
-
-        case .flow:
+            let wave = 0.5 - 0.5 * cos(progress * 2 * .pi)
+            glowLayers(color: appearance.glowColor, intensity: 0.28 + 0.72 * wave)
+        case .flow, .solarFlare:
+            // SwiftUI fallback intentionally degrades the Sol flare to a gold flow band.
             flowGlow(progress: reduceMotion ? 0.5 : seconds.truncatingRemainder(dividingBy: 4) / 4)
         }
     }
 
     private func flowGlow(progress: Double) -> some View {
         ZStack {
-            // Approved preset: 60% runner, 20% ambient, 4s loop,
-            // 55% path length, #6D5DFC.
-            glowLayers(color: IslandDesign.flow, intensity: 0.12)
+            glowLayers(color: appearance.glowColor, intensity: 0.12)
             flowBandLayers(progress: progress, intensity: 0.60)
         }
     }
@@ -542,16 +521,13 @@ private struct StatusGlow: View {
     ) -> some View {
         band
             .stroke(
-                IslandDesign.flow,
+                appearance.glowColor,
                 style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round)
             )
             .blur(radius: blur)
             .opacity(opacity)
     }
 
-    /// Four path-bound falloff layers reproduce the approved 3.5pt / 5.5pt
-    /// visual profile without creating one rectangular Gaussian render texture.
-    /// The black surface is above these layers, so the visible energy falls out.
     private func glowLayers(color: Color, intensity: Double) -> some View {
         ZStack {
             glowLayer(color: color, width: 3.5, blur: 0.7, opacity: intensity * 0.58)

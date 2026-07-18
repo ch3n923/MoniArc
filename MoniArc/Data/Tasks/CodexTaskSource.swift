@@ -54,8 +54,12 @@ actor CodexTaskSource: TaskSource {
 
         for signal in snapshot.signals {
             switch signal {
-            case let .terminalError(taskID):
-                yield(.terminalError(taskID: taskID))
+            case let .terminalError(taskID, taskUpdatedAt, lightingProfile):
+                yield(.terminalError(
+                    taskID: taskID,
+                    taskUpdatedAt: taskUpdatedAt,
+                    lightingProfile: lightingProfile
+                ))
             case let .lifecycleActivity(taskID):
                 yield(.lifecycleActivity(taskID: taskID))
             }
@@ -66,7 +70,8 @@ actor CodexTaskSource: TaskSource {
                 id: task.id,
                 title: task.title,
                 runState: map(task.runState),
-                updatedAt: task.updatedAt
+                updatedAt: task.updatedAt,
+                lightingProfile: task.lightingProfile
             )
         }
         yield(.snapshot(summaries))

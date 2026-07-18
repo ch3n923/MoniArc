@@ -3,11 +3,16 @@ import Foundation
 struct JSONLTaskLifecycleScanner: Sendable {
     private let decoder = LifecycleEnvelopeDecoder()
 
-    func scan(fileURL: URL, byteLimit requestedLimit: Int) throws -> TaskLifecycleScanResult {
+    func scan(
+        fileURL: URL,
+        byteLimit requestedLimit: Int,
+        fallbackProfile: TaskLightingProfile = .fallback
+    ) throws -> TaskLifecycleScanResult {
         let byteLimit = max(1, min(requestedLimit, CodexTaskObserverConfiguration.defaultPerFileByteLimit))
         let read = try BoundedJSONLTailReader.read(fileURL: fileURL, byteLimit: byteLimit)
 
         var state: TaskLifecycleState?
+        var lightingProfile = fallbackProfile
         var pendingUserInputCalls = Set<String>()
         var recognizedEnvelopeCount = 0
         var recognizedLifecycleCount = 0
@@ -21,6 +26,9 @@ struct JSONLTaskLifecycleScanner: Sendable {
             recognizedEnvelopeCount += 1
 
             switch event {
+            case let .lightingSettings(patch):
+                patch.apply(to: &lightingProfile)
+
             case .taskStarted:
                 state = .running
                 pendingUserInputCalls.removeAll(keepingCapacity: true)
@@ -78,6 +86,7 @@ struct JSONLTaskLifecycleScanner: Sendable {
 
         return TaskLifecycleScanResult(
             activeState: state,
+            lightingProfile: lightingProfile,
             bytesRead: read.bytesRead,
             recognizedEnvelopeCount: recognizedEnvelopeCount,
             recognizedLifecycleCount: recognizedLifecycleCount,
@@ -149,6 +158,7 @@ private struct BoundedJSONLTailReader {
 }
 
 private enum LifecycleEnvelopeEvent {
+    case lightingSettings(TaskLightingProfilePatch)
     case taskStarted
     case taskActivity
     case requestUserInput(callID: String?)
@@ -157,6 +167,18 @@ private enum LifecycleEnvelopeEvent {
     case explicitError
     case interrupted
     case compatibleButIrrelevant
+}
+
+private struct TaskLightingProfilePatch {
+    var theme: TaskLightingTheme?
+    var speed: TaskSpeedMode?
+    var prefersHDR: Bool?
+
+    func apply(to profile: inout TaskLightingProfile) {
+        if let theme { profile.theme = theme }
+        if let speed { profile.speed = speed }
+        if let prefersHDR { profile.prefersHDR = prefersHDR }
+    }
 }
 
 /// Decodes only routing and lifecycle keys. Unknown JSON members (including
@@ -168,6 +190,14 @@ private struct LifecycleEnvelopeDecoder: Sendable {
         }
 
         let envelopeType = Self.normalize(envelope.type)
+        if envelopeType == "turncontext" {
+            return .lightingSettings(Self.lightingPatch(
+                model: envelope.payload.model,
+                serviceTier: envelope.payload.serviceTier,
+                reasoningEffort: envelope.payload.effort ?? envelope.payload.reasoningEffort
+            ))
+        }
+
         guard envelopeType == "eventmsg" || envelopeType == "responseitem" else {
             return nil
         }
@@ -177,6 +207,15 @@ private struct LifecycleEnvelopeDecoder: Sendable {
 
         if envelopeType == "eventmsg" {
             switch payloadType {
+            case "threadsettingsapplied":
+                guard let settings = envelope.payload.threadSettings else {
+                    return .compatibleButIrrelevant
+                }
+                return .lightingSettings(Self.lightingPatch(
+                    model: settings.model,
+                    serviceTier: settings.serviceTier,
+                    reasoningEffort: settings.reasoningEffort ?? settings.effort
+                ))
             case "taskstarted":
                 return .taskStarted
             case "usermessage", "agentreasoning", "agentmessage", "tokencount":
@@ -227,6 +266,18 @@ private struct LifecycleEnvelopeDecoder: Sendable {
             .joined()
             .lowercased()
     }
+
+    private static func lightingPatch(
+        model: String?,
+        serviceTier: String?,
+        reasoningEffort: String?
+    ) -> TaskLightingProfilePatch {
+        TaskLightingProfilePatch(
+            theme: model.map(TaskLightingProfile.normalizedTheme),
+            speed: serviceTier.map(TaskLightingProfile.normalizedSpeed),
+            prefersHDR: reasoningEffort.map(TaskLightingProfile.normalizedHDRPreference)
+        )
+    }
 }
 
 private struct LifecycleEnvelope: Decodable {
@@ -238,6 +289,11 @@ private struct LifecycleEnvelope: Decodable {
         let name: String?
         let callID: String?
         let status: String?
+        let model: String?
+        let effort: String?
+        let reasoningEffort: String?
+        let serviceTier: String?
+        let threadSettings: ThreadSettings?
 
         enum CodingKeys: String, CodingKey {
             case type
@@ -246,6 +302,14 @@ private struct LifecycleEnvelope: Decodable {
             case camelCaseCallID = "callId"
             case id
             case status
+            case model
+            case effort
+            case reasoningEffort = "reasoning_effort"
+            case camelCaseReasoningEffort = "reasoningEffort"
+            case serviceTier = "service_tier"
+            case camelCaseServiceTier = "serviceTier"
+            case threadSettings = "thread_settings"
+            case camelCaseThreadSettings = "threadSettings"
         }
 
         init(from decoder: Decoder) throws {
@@ -253,9 +317,43 @@ private struct LifecycleEnvelope: Decodable {
             type = try container.decodeIfPresent(String.self, forKey: .type)
             name = try container.decodeIfPresent(String.self, forKey: .name)
             status = try container.decodeIfPresent(String.self, forKey: .status)
+            model = try container.decodeIfPresent(String.self, forKey: .model)
+            effort = try container.decodeIfPresent(String.self, forKey: .effort)
+            reasoningEffort = try container.decodeIfPresent(String.self, forKey: .reasoningEffort)
+                ?? container.decodeIfPresent(String.self, forKey: .camelCaseReasoningEffort)
+            serviceTier = try container.decodeIfPresent(String.self, forKey: .serviceTier)
+                ?? container.decodeIfPresent(String.self, forKey: .camelCaseServiceTier)
+            threadSettings = try container.decodeIfPresent(ThreadSettings.self, forKey: .threadSettings)
+                ?? container.decodeIfPresent(ThreadSettings.self, forKey: .camelCaseThreadSettings)
             callID = try container.decodeIfPresent(String.self, forKey: .callID)
                 ?? container.decodeIfPresent(String.self, forKey: .camelCaseCallID)
                 ?? container.decodeIfPresent(String.self, forKey: .id)
+        }
+
+        struct ThreadSettings: Decodable {
+            let model: String?
+            let effort: String?
+            let reasoningEffort: String?
+            let serviceTier: String?
+
+            enum CodingKeys: String, CodingKey {
+                case model
+                case effort
+                case reasoningEffort = "reasoning_effort"
+                case camelCaseReasoningEffort = "reasoningEffort"
+                case serviceTier = "service_tier"
+                case camelCaseServiceTier = "serviceTier"
+            }
+
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                model = try container.decodeIfPresent(String.self, forKey: .model)
+                effort = try container.decodeIfPresent(String.self, forKey: .effort)
+                reasoningEffort = try container.decodeIfPresent(String.self, forKey: .reasoningEffort)
+                    ?? container.decodeIfPresent(String.self, forKey: .camelCaseReasoningEffort)
+                serviceTier = try container.decodeIfPresent(String.self, forKey: .serviceTier)
+                    ?? container.decodeIfPresent(String.self, forKey: .camelCaseServiceTier)
+            }
         }
     }
 }

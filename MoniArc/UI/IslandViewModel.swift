@@ -47,7 +47,8 @@ final class IslandViewModel: ObservableObject {
     @Published var tasks: [IslandTaskPresentation] = []
     @Published var selectedTaskIndex = 0
     @Published var status: IslandVisualStatus = .disconnected
-    @Published var borderGlowStyle: BorderGlowStyle = .breathe
+    @Published var glowAppearance: ResolvedGlowAppearance = .inactive
+    @Published var usesMetalGlow = false
     @Published var quotaSourceMessage: String?
 
     var onPreviousTask: (() -> Void)?

@@ -8,7 +8,10 @@ import SwiftUI
 @MainActor
 final class PanelCoordinator: NSObject, PanelDriver {
     static let placementDefaultsKey = "MoniArc.placementPreference"
-    static let borderGlowDefaultsKey = "MoniArc.borderGlowStyle"
+    static let glowMotionOverrideDefaultsKey = "MoniArc.glowMotionOverride"
+    static let hdrOverrideDefaultsKey = "MoniArc.hdrOverride"
+    static let legacyBorderGlowDefaultsKey = "MoniArc.borderGlowStyle"
+    static let legacyHDRBrightnessDefaultsKey = "MoniArc.hdrBrightnessMode"
 
     let model: IslandViewModel
     let panel = IslandPanel()
@@ -23,12 +26,15 @@ final class PanelCoordinator: NSObject, PanelDriver {
     private let pointerMonitor = PointerMonitor()
     private var observers: [NSObjectProtocol] = []
     private var hostingView: NSHostingView<IslandView>?
+    private var hdrGlowView: HDRStatusGlowView?
     private var pointerInside = false
     private var reflectedPanelPhase: PanelPhase = .collapsed
     private var isSessionAvailable = true
     private var activeRevision: UInt64 = 0
     private var reflectedPreference: PlacementPreference
-    private var reflectedGlowStyle: BorderGlowStyle
+    private var reflectedGlowMotionOverride: GlowMotionOverride
+    private var reflectedHDROverride: HDROverride
+    private var lastReflectedState: IslandState?
 
     override init() {
         fatalError("Use init(model:)")
@@ -37,9 +43,17 @@ final class PanelCoordinator: NSObject, PanelDriver {
     init(model: IslandViewModel) {
         self.model = model
         self.reflectedPreference = Self.savedPlacementPreference
-        self.reflectedGlowStyle = Self.savedBorderGlowStyle
+        self.reflectedGlowMotionOverride = Self.savedGlowMotionOverride
+        self.reflectedHDROverride = Self.savedHDROverride
         super.init()
-        model.borderGlowStyle = reflectedGlowStyle
+        UserDefaults.standard.set(
+            reflectedGlowMotionOverride.rawValue,
+            forKey: Self.glowMotionOverrideDefaultsKey
+        )
+        UserDefaults.standard.set(
+            reflectedHDROverride.rawValue,
+            forKey: Self.hdrOverrideDefaultsKey
+        )
     }
 
     static var savedPlacementPreference: PlacementPreference {
@@ -47,16 +61,37 @@ final class PanelCoordinator: NSObject, PanelDriver {
         return PlacementPreference(rawValue: raw ?? "") ?? .automatic
     }
 
-    static var savedBorderGlowStyle: BorderGlowStyle {
-        let raw = UserDefaults.standard.string(forKey: borderGlowDefaultsKey)
-        if let style = BorderGlowStyle(rawValue: raw ?? "") {
-            return style
+    static var savedGlowMotionOverride: GlowMotionOverride {
+        let defaults = UserDefaults.standard
+        if let raw = defaults.string(forKey: glowMotionOverrideDefaultsKey),
+           let value = GlowMotionOverride(rawValue: raw) {
+            return value
         }
-        // Migrate values written by the earlier breathing/flowing implementation.
-        switch raw {
-        case "flowing": return .flow
-        case "breathing": return .breathe
-        default: return .breathe
+
+        guard defaults.object(forKey: legacyBorderGlowDefaultsKey) != nil else {
+            return .automatic
+        }
+        switch defaults.string(forKey: legacyBorderGlowDefaultsKey) {
+        case "flow", "flowing": return .flow
+        case "breathe", "breathing": return .breathe
+        default: return .automatic
+        }
+    }
+
+    static var savedHDROverride: HDROverride {
+        let defaults = UserDefaults.standard
+        if let raw = defaults.string(forKey: hdrOverrideDefaultsKey),
+           let value = HDROverride(rawValue: raw) {
+            return value
+        }
+
+        guard defaults.object(forKey: legacyHDRBrightnessDefaultsKey) != nil else {
+            return .automatic
+        }
+        switch defaults.string(forKey: legacyHDRBrightnessDefaultsKey) {
+        case "bright", "soft", "on": return .on
+        case "off": return .off
+        default: return .automatic
         }
     }
 
@@ -73,10 +108,12 @@ final class PanelCoordinator: NSObject, PanelDriver {
         pointerMonitor.stop()
         observers.forEach(NotificationCenter.default.removeObserver)
         observers.removeAll()
+        hdrGlowView?.stopRendering()
         panel.orderOut(nil)
     }
 
     func reflect(state: IslandState) {
+        lastReflectedState = state
         reflectedPreference = state.placementPreference
         reflectedPanelPhase = state.panelPhase
         UserDefaults.standard.set(state.placementPreference.rawValue, forKey: Self.placementDefaultsKey)
@@ -99,6 +136,9 @@ final class PanelCoordinator: NSObject, PanelDriver {
             model.physicalNotchWidth = 0
             model.usesWingLayout = false
         }
+
+        applyResolvedGlowAppearance()
+        updateHDRGlow()
 
         if !isSessionAvailable || state.panelLayout == nil {
             panel.orderOut(nil)
@@ -126,6 +166,7 @@ final class PanelCoordinator: NSObject, PanelDriver {
         panel.orderFrontRegardless()
         if duration == 0 {
             panel.setFrame(targetFrame, display: true)
+            updateHDRGlow()
             onFrameTransition?(oldFrame, targetFrame, 0, revision, frontmostPID)
             updatePointerState(at: NSEvent.mouseLocation)
             return
@@ -144,6 +185,7 @@ final class PanelCoordinator: NSObject, PanelDriver {
                 Task { @MainActor [weak self] in
                     if let self, self.activeRevision == revision {
                         self.panel.setFrame(targetFrame, display: true)
+                        self.updateHDRGlow()
                         self.updatePointerState(at: NSEvent.mouseLocation)
                     }
                     continuation.resume()
@@ -155,17 +197,55 @@ final class PanelCoordinator: NSObject, PanelDriver {
     private func configureContent() {
         model.onContextMenu = { [weak self] point in self?.showContextMenu(at: point) }
 
-        let host = NSHostingView(rootView: IslandView(model: model))
-        host.frame = CGRect(
+        let initialFrame = CGRect(
             origin: .zero,
             size: CGSize(
                 width: PanelGeometry.panelWidth,
                 height: PanelGeometry.collapsedHeight + PanelGeometry.glowOutset
             )
         )
+        let container = NSView(frame: initialFrame)
+        container.wantsLayer = true
+        container.layer?.backgroundColor = NSColor.clear.cgColor
+
+        let hdrGlow = HDRStatusGlowView(frame: initialFrame)
+        model.usesMetalGlow = hdrGlow.isRendererAvailable
+        if hdrGlow.isRendererAvailable {
+            hdrGlow.autoresizingMask = [.width, .height]
+            container.addSubview(hdrGlow)
+            hdrGlowView = hdrGlow
+        }
+
+        let host = NSHostingView(rootView: IslandView(model: model))
+        host.frame = initialFrame
         host.autoresizingMask = [.width, .height]
-        panel.contentView = host
+        container.addSubview(host, positioned: .above, relativeTo: hdrGlowView)
+        panel.contentView = container
+
         hostingView = host
+        updateHDRGlow()
+    }
+
+    private func updateHDRGlow() {
+        guard let hdrGlowView else { return }
+        let surfaceHeight: CGFloat
+        if model.isExpanded {
+            surfaceHeight = model.placement == .overlay
+                ? IslandDesign.overlayExpandedHeight
+                : IslandDesign.floatingExpandedHeight
+        } else {
+            surfaceHeight = model.placement == .overlay && model.usesWingLayout
+                ? IslandDesign.overlayCollapsedHeight
+                : IslandDesign.collapsedHeight
+        }
+
+        hdrGlowView.update(
+            appearance: model.glowAppearance,
+            surfaceHeight: surfaceHeight,
+            bottomRadius: model.isExpanded ? IslandDesign.expandedRadius : IslandDesign.floatingRadius,
+            closesTop: model.placement == .floating,
+            reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        )
     }
 
     private func updatePointerState(at location: CGPoint) {
@@ -190,7 +270,10 @@ final class PanelCoordinator: NSObject, PanelDriver {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.onDisplayChanged?() }
+            Task { @MainActor [weak self] in
+                self?.updateHDRGlow()
+                self?.onDisplayChanged?()
+            }
         })
 
         observers.append(workspaceCenter.addObserver(
@@ -244,7 +327,7 @@ final class PanelCoordinator: NSObject, PanelDriver {
 
         menu.addItem(.separator())
         let glowMenu = NSMenu(title: "边框光效")
-        for style in BorderGlowStyle.allCases {
+        for style in GlowMotionOverride.allCases {
             let item = NSMenuItem(
                 title: style.localizedName,
                 action: #selector(selectBorderGlow(_:)),
@@ -252,12 +335,28 @@ final class PanelCoordinator: NSObject, PanelDriver {
             )
             item.target = self
             item.representedObject = style.rawValue
-            item.state = style == reflectedGlowStyle ? .on : .off
+            item.state = style == reflectedGlowMotionOverride ? .on : .off
             glowMenu.addItem(item)
         }
         let glowItem = NSMenuItem(title: "边框光效", action: nil, keyEquivalent: "")
         glowItem.submenu = glowMenu
         menu.addItem(glowItem)
+
+        let hdrMenu = NSMenu(title: "HDR")
+        for mode in HDROverride.allCases {
+            let item = NSMenuItem(
+                title: mode.localizedName,
+                action: #selector(selectHDRBrightness(_:)),
+                keyEquivalent: ""
+            )
+            item.target = self
+            item.representedObject = mode.rawValue
+            item.state = mode == reflectedHDROverride ? .on : .off
+            hdrMenu.addItem(item)
+        }
+        let hdrItem = NSMenuItem(title: "HDR", action: nil, keyEquivalent: "")
+        hdrItem.submenu = hdrMenu
+        menu.addItem(hdrItem)
         menu.addItem(.separator())
 
         let github = NSMenuItem(
@@ -282,10 +381,39 @@ final class PanelCoordinator: NSObject, PanelDriver {
 
     @objc private func selectBorderGlow(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String,
-              let style = BorderGlowStyle(rawValue: raw) else { return }
-        reflectedGlowStyle = style
-        model.borderGlowStyle = style
-        UserDefaults.standard.set(style.rawValue, forKey: Self.borderGlowDefaultsKey)
+              let style = GlowMotionOverride(rawValue: raw) else { return }
+        setGlowMotionOverride(style)
+    }
+
+    @objc private func selectHDRBrightness(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let mode = HDROverride(rawValue: raw) else { return }
+        setHDROverride(mode)
+    }
+
+    func setGlowMotionOverride(_ value: GlowMotionOverride) {
+        reflectedGlowMotionOverride = value
+        UserDefaults.standard.set(value.rawValue, forKey: Self.glowMotionOverrideDefaultsKey)
+        applyResolvedGlowAppearance()
+        updateHDRGlow()
+    }
+
+    func setHDROverride(_ value: HDROverride) {
+        reflectedHDROverride = value
+        UserDefaults.standard.set(value.rawValue, forKey: Self.hdrOverrideDefaultsKey)
+        applyResolvedGlowAppearance()
+        updateHDRGlow()
+    }
+
+    private func applyResolvedGlowAppearance() {
+        guard let state = lastReflectedState else {
+            model.glowAppearance = .inactive
+            return
+        }
+        model.glowAppearance = state.resolvedGlowAppearance(
+            motionOverride: reflectedGlowMotionOverride,
+            hdrOverride: reflectedHDROverride
+        )
     }
 
     @objc private func openGitHubRepository() {

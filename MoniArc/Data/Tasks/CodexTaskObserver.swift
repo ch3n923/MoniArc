@@ -47,6 +47,7 @@ actor CodexTaskObserver {
     private var refreshGeneration: UInt64 = 0
     private var seenTerminalErrorOffsets: [String: UInt64] = [:]
     private var seenResetActivityOffsets: [String: UInt64] = [:]
+    private var cachedLightingProfiles: [String: TaskLightingProfile] = [:]
     private var hasCompletedInitialScan = false
 
     init(
@@ -108,6 +109,7 @@ actor CodexTaskObserver {
         watcherStartupFailed = false
         seenTerminalErrorOffsets.removeAll()
         seenResetActivityOffsets.removeAll()
+        cachedLightingProfiles.removeAll()
         hasCompletedInitialScan = false
     }
 
@@ -155,10 +157,16 @@ actor CodexTaskObserver {
 
             let fileLimit = min(perFileByteLimit, remainingByteBudget)
             do {
-                let result = try lifecycleScanner.scan(fileURL: candidate.rolloutURL, byteLimit: fileLimit)
+                let fallbackProfile = cachedLightingProfiles[candidate.id] ?? candidate.lightingProfile
+                let result = try lifecycleScanner.scan(
+                    fileURL: candidate.rolloutURL,
+                    byteLimit: fileLimit,
+                    fallbackProfile: fallbackProfile
+                )
                 existingFileCount += 1
                 remainingByteBudget -= result.bytesRead
                 compatibleEnvelopeCount += result.recognizedEnvelopeCount
+                cachedLightingProfiles[candidate.id] = result.lightingProfile
 
                 if let offset = result.latestTerminalErrorOffset {
                     let previousOffset = seenTerminalErrorOffsets[candidate.id]
@@ -172,7 +180,11 @@ actor CodexTaskObserver {
                             PendingTaskObservationSignal(
                                 sortDate: candidate.updatedAt ?? capturedAt,
                                 offset: offset,
-                                signal: .terminalError(taskID: candidate.id)
+                                signal: .terminalError(
+                                    taskID: candidate.id,
+                                    taskUpdatedAt: candidate.updatedAt,
+                                    lightingProfile: result.lightingProfile
+                                )
                             )
                         )
                     }
@@ -198,7 +210,8 @@ actor CodexTaskObserver {
                         id: candidate.id,
                         title: candidate.title,
                         runState: map(state),
-                        updatedAt: candidate.updatedAt
+                        updatedAt: candidate.updatedAt,
+                        lightingProfile: result.lightingProfile
                     )
                 )
             } catch {
@@ -233,6 +246,7 @@ actor CodexTaskObserver {
         let candidateIDs = Set(candidates.map(\.id))
         seenTerminalErrorOffsets = seenTerminalErrorOffsets.filter { candidateIDs.contains($0.key) }
         seenResetActivityOffsets = seenResetActivityOffsets.filter { candidateIDs.contains($0.key) }
+        cachedLightingProfiles = cachedLightingProfiles.filter { candidateIDs.contains($0.key) }
         pendingSignals.sort {
             if $0.sortDate != $1.sortDate {
                 return $0.sortDate < $1.sortDate

@@ -18,6 +18,7 @@
 		1F78D4F945A762670DFB45DB /* CodexRateLimitsParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB4D53F3B464BC47AE8C3FF2 /* CodexRateLimitsParser.swift */; };
 		278B1A39CA871F5673F97915 /* CodexTaskObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88379B75DA1FE886FF4A567C /* CodexTaskObserver.swift */; };
 		2C0762E79E79EBEE055D2288 /* SQLiteTaskCandidateIndexTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE16EE17C5A83F137C285D69 /* SQLiteTaskCandidateIndexTests.swift */; };
+		2D55D73EEA1C28F0563C2950 /* EDRDisplayPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55CC8A66CB7F9258DCF6CD23 /* EDRDisplayPolicy.swift */; };
 		2DF220537C83450675AF217D /* AppKitScreenProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D60E5574800EB0A12D2CF8B0 /* AppKitScreenProvider.swift */; };
 		3643B73F04E8632D4182AA00 /* CodexBinaryResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1511B36473F8D4845DDBFE23 /* CodexBinaryResolver.swift */; };
 		3E4E048889C3182DF7154E9E /* CodexSubprocessEnvironmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C575C847169EAF28282C5E0A /* CodexSubprocessEnvironmentTests.swift */; };
@@ -45,6 +46,7 @@
 		C0910972BC6AD839051BFDBD /* CodexQuotaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9C3A4263BF8AA02B81742B /* CodexQuotaModels.swift */; };
 		C14C1A06BF5BE64BA897C642 /* CodexLaunchPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E6F0DA6DC82B7113C30BED /* CodexLaunchPlan.swift */; };
 		C28D38AC49A327D9BE418467 /* CodexExecutableTrustTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F7C67F1FB94A4502DC1AD8 /* CodexExecutableTrustTests.swift */; };
+		C5E111505E2C3865BB44A56C /* HDRGlowShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 503D2783FBB7ABF86E9C9089 /* HDRGlowShaders.metal */; };
 		CFE592801CAEC009601AFBE5 /* SQLiteTaskCandidateIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 384D86F7BD8293AC24D88C80 /* SQLiteTaskCandidateIndex.swift */; };
 		D1E72CCC1D004723E3DA2A84 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 242477F4C396D2F8446EDEF2 /* PrivacyInfo.xcprivacy */; };
 		D6C7670E30F98AC3C3AE9815 /* DisplayGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53DBE0ECC3982DDA84D8FF38 /* DisplayGeometry.swift */; };
@@ -55,6 +57,7 @@
 		EF468E1DAD8CA41D1092BC45 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 0645E0DFA80A078F23638C21 /* libsqlite3.tbd */; };
 		F062102D280EA099695B4D24 /* PanelPointerSensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F58C515B134C8C24301754AB /* PanelPointerSensor.swift */; };
 		FC4234D8E7F38103BC0A2174 /* IslandProtocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1C20BACDF3A6671D7FDC3E /* IslandProtocols.swift */; };
+		FD440A39EC088470FC11A501 /* HDRStatusGlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937DD063C3E2E99A31F6BBD8 /* HDRStatusGlow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -80,7 +83,9 @@
 		384D86F7BD8293AC24D88C80 /* SQLiteTaskCandidateIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteTaskCandidateIndex.swift; sourceTree = "<group>"; };
 		3CF1BB0C6DB93AB456566DB8 /* IslandClocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandClocks.swift; sourceTree = "<group>"; };
 		4EC158C1FB011D69446937CC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		503D2783FBB7ABF86E9C9089 /* HDRGlowShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = HDRGlowShaders.metal; sourceTree = "<group>"; };
 		53DBE0ECC3982DDA84D8FF38 /* DisplayGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayGeometry.swift; sourceTree = "<group>"; };
+		55CC8A66CB7F9258DCF6CD23 /* EDRDisplayPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EDRDisplayPolicy.swift; sourceTree = "<group>"; };
 		56BC0F1B4DC1D81621FF487F /* IslandViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandViewModel.swift; sourceTree = "<group>"; };
 		59979B416DE3989B016B24F2 /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = System/Library/Frameworks/CoreServices.framework; sourceTree = SDKROOT; };
 		5C947130B82DB8BC4D1CA81D /* IslandView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandView.swift; sourceTree = "<group>"; };
@@ -94,6 +99,7 @@
 		7A9C3A4263BF8AA02B81742B /* CodexQuotaModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexQuotaModels.swift; sourceTree = "<group>"; };
 		84AEA8D7A62116BF040C1C74 /* CodexAppServerQuotaSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerQuotaSource.swift; sourceTree = "<group>"; };
 		88379B75DA1FE886FF4A567C /* CodexTaskObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTaskObserver.swift; sourceTree = "<group>"; };
+		937DD063C3E2E99A31F6BBD8 /* HDRStatusGlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HDRStatusGlow.swift; sourceTree = "<group>"; };
 		9AEA0E5C507617DFAF7ACCE3 /* IslandReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandReducer.swift; sourceTree = "<group>"; };
 		A5D237CFDB85B0AD513A822C /* SessionsFSEventsWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsFSEventsWatcherTests.swift; sourceTree = "<group>"; };
 		A73B24383F694597BD12E267 /* CodexTaskObserverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTaskObserverTests.swift; sourceTree = "<group>"; };
@@ -150,6 +156,9 @@
 			isa = PBXGroup;
 			children = (
 				16B0BF4483142D8D5120EA46 /* DesignTokens.swift */,
+				55CC8A66CB7F9258DCF6CD23 /* EDRDisplayPolicy.swift */,
+				503D2783FBB7ABF86E9C9089 /* HDRGlowShaders.metal */,
+				937DD063C3E2E99A31F6BBD8 /* HDRStatusGlow.swift */,
 				6FA48B19C44C6A7DEBB661DC /* InteractionCaptureView.swift */,
 				5C947130B82DB8BC4D1CA81D /* IslandView.swift */,
 				56BC0F1B4DC1D81621FF487F /* IslandViewModel.swift */,
@@ -462,6 +471,9 @@
 				91E6348D4E93221A9D1D3F65 /* CodexTaskSource.swift in Sources */,
 				174D05B253EBB63AF6208BE5 /* DesignTokens.swift in Sources */,
 				D6C7670E30F98AC3C3AE9815 /* DisplayGeometry.swift in Sources */,
+				2D55D73EEA1C28F0563C2950 /* EDRDisplayPolicy.swift in Sources */,
+				C5E111505E2C3865BB44A56C /* HDRGlowShaders.metal in Sources */,
+				FD440A39EC088470FC11A501 /* HDRStatusGlow.swift in Sources */,
 				910DFE250C968BDBEBFA0F84 /* HarnessController.swift in Sources */,
 				436EFBBA8FF739178F4B4D67 /* InteractionCaptureView.swift in Sources */,
 				11761D49067F445D0515C02A /* IslandClocks.swift in Sources */,
@@ -546,7 +558,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -567,7 +579,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -651,7 +663,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -666,7 +678,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

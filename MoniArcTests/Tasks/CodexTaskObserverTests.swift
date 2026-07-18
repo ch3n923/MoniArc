@@ -26,7 +26,8 @@ final class CodexTaskObserverTests: XCTestCase {
                 id: "task-1",
                 title: "Build native panel",
                 runState: .running,
-                updatedAt: Date(timeIntervalSince1970: 1_700_000_000)
+                updatedAt: Date(timeIntervalSince1970: 1_700_000_000),
+                lightingProfile: .fallback
             ),
         ])
     }
@@ -151,7 +152,11 @@ final class CodexTaskObserverTests: XCTestCase {
         await source.stop()
 
         XCTAssertEqual(first, .healthChanged(.connected))
-        XCTAssertEqual(second, .terminalError(taskID: "failed-task"))
+        XCTAssertEqual(second, .terminalError(
+            taskID: "failed-task",
+            taskUpdatedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            lightingProfile: .fallback
+        ))
         XCTAssertEqual(third, .snapshot([]))
     }
 

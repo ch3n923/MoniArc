@@ -51,9 +51,9 @@ struct DisplaySnapshot: Equatable, Sendable {
 
 struct PanelGeometry: Equatable, Sendable {
     static let islandWidth: CGFloat = 304
-    /// Transparent rendering safety margin for the 5.5pt halo. This must stay
-    /// in sync with IslandDesign.glowOutset.
-    static let glowOutset: CGFloat = 28
+    /// Transparent rendering safety margin for the largest Sol corona. This
+    /// must stay in sync with IslandDesign.glowOutset.
+    static let glowOutset: CGFloat = 104
     static let panelWidth: CGFloat = islandWidth + glowOutset * 2
     static let collapsedHeight: CGFloat = 32
     /// The extra transparent strip lets the status outline pass below the

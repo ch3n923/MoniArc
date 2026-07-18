@@ -30,6 +30,131 @@ public enum TaskRunState: String, Codable, Sendable {
     case unknown
 }
 
+public enum TaskLightingTheme: String, CaseIterable, Codable, Sendable {
+    case sol
+    case terra
+    case luna
+    case other
+
+    fileprivate var lightingPriority: Int {
+        switch self {
+        case .sol: 0
+        case .terra: 1
+        case .luna: 2
+        case .other: 3
+        }
+    }
+}
+
+public enum TaskSpeedMode: String, CaseIterable, Codable, Sendable {
+    case standard
+    case fast
+}
+
+/// The only task settings retained outside the bounded JSONL decoder.
+/// Prompts, replies and raw configuration objects never enter this model.
+public struct TaskLightingProfile: Equatable, Codable, Sendable {
+    public var theme: TaskLightingTheme
+    public var speed: TaskSpeedMode
+    public var prefersHDR: Bool
+
+    public init(
+        theme: TaskLightingTheme,
+        speed: TaskSpeedMode,
+        prefersHDR: Bool
+    ) {
+        self.theme = theme
+        self.speed = speed
+        self.prefersHDR = prefersHDR
+    }
+
+    public static let fallback = TaskLightingProfile(
+        theme: .other,
+        speed: .standard,
+        prefersHDR: false
+    )
+
+    public static func normalized(
+        model: String?,
+        serviceTier: String?,
+        reasoningEffort: String?
+    ) -> TaskLightingProfile {
+        TaskLightingProfile(
+            theme: normalizedTheme(model),
+            speed: normalizedSpeed(serviceTier),
+            prefersHDR: normalizedHDRPreference(reasoningEffort)
+        )
+    }
+
+    public static func normalizedTheme(_ model: String?) -> TaskLightingTheme {
+        switch model?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "gpt-5.6-sol": .sol
+        case "gpt-5.6-terra": .terra
+        case "gpt-5.6-luna": .luna
+        default: .other
+        }
+    }
+
+    public static func normalizedSpeed(_ serviceTier: String?) -> TaskSpeedMode {
+        switch serviceTier?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "priority", "fast": .fast
+        default: .standard
+        }
+    }
+
+    public static func normalizedHDRPreference(_ reasoningEffort: String?) -> Bool {
+        guard let value = reasoningEffort?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        else { return false }
+        return ["high", "xhigh", "max", "ultra"].contains(value)
+    }
+}
+
+public enum GlowMotion: String, Codable, Sendable {
+    case breathe
+    case flow
+    case solarFlare
+}
+
+public enum GlowMotionOverride: String, CaseIterable, Codable, Sendable {
+    case automatic
+    case breathe
+    case flow
+}
+
+public enum HDROverride: String, CaseIterable, Codable, Sendable {
+    case automatic
+    case on
+    case off
+}
+
+public struct ResolvedGlowAppearance: Equatable, Sendable {
+    public var isBusy: Bool
+    public var theme: TaskLightingTheme
+    public var motion: GlowMotion
+    public var usesHDR: Bool
+
+    public init(
+        isBusy: Bool,
+        theme: TaskLightingTheme,
+        motion: GlowMotion,
+        usesHDR: Bool
+    ) {
+        self.isBusy = isBusy
+        self.theme = theme
+        self.motion = motion
+        self.usesHDR = usesHDR
+    }
+
+    public static let inactive = ResolvedGlowAppearance(
+        isBusy: false,
+        theme: .other,
+        motion: .breathe,
+        usesHDR: false
+    )
+}
+
 public enum SourceHealth: String, Codable, Sendable {
     case connected
     case stale
@@ -204,12 +329,20 @@ public struct TaskSummary: Identifiable, Equatable, Sendable {
     public var title: String
     public var runState: TaskRunState
     public var updatedAt: Date?
+    public var lightingProfile: TaskLightingProfile
 
-    public init(id: String, title: String, runState: TaskRunState, updatedAt: Date? = nil) {
+    public init(
+        id: String,
+        title: String,
+        runState: TaskRunState,
+        updatedAt: Date? = nil,
+        lightingProfile: TaskLightingProfile = .fallback
+    ) {
         self.id = id
         self.title = title
         self.runState = runState
         self.updatedAt = updatedAt
+        self.lightingProfile = lightingProfile
     }
 }
 
@@ -277,11 +410,21 @@ public struct PanelTransition: Equatable, Sendable {
 
 public struct TerminalErrorLatch: Equatable, Sendable {
     public var taskID: String?
+    public var taskUpdatedAt: Date?
+    public var lightingProfile: TaskLightingProfile
     public var expiresAt: MonotonicInstant
     public var generation: GenerationToken
 
-    public init(taskID: String?, expiresAt: MonotonicInstant, generation: GenerationToken) {
+    public init(
+        taskID: String?,
+        taskUpdatedAt: Date? = nil,
+        lightingProfile: TaskLightingProfile = .fallback,
+        expiresAt: MonotonicInstant,
+        generation: GenerationToken
+    ) {
         self.taskID = taskID
+        self.taskUpdatedAt = taskUpdatedAt
+        self.lightingProfile = lightingProfile
         self.expiresAt = expiresAt
         self.generation = generation
     }
@@ -394,5 +537,80 @@ public struct IslandState: Equatable, Sendable {
             return .running
         }
         return .idle
+    }
+
+    public func resolvedGlowAppearance(
+        motionOverride: GlowMotionOverride,
+        hdrOverride: HDROverride
+    ) -> ResolvedGlowAppearance {
+        let status = effectiveStatus
+        guard status != .idle, status != .disconnected else {
+            return .inactive
+        }
+
+        struct Candidate {
+            var id: String
+            var updatedAt: Date?
+            var profile: TaskLightingProfile
+        }
+
+        var candidates = tasks.compactMap { task -> Candidate? in
+            guard task.runState != .unknown else { return nil }
+            return Candidate(id: task.id, updatedAt: task.updatedAt, profile: task.lightingProfile)
+        }
+        if let latch = terminalErrorLatch,
+           !candidates.contains(where: { $0.id == latch.taskID }) {
+            candidates.append(
+                Candidate(
+                    id: latch.taskID ?? "terminal-error",
+                    updatedAt: latch.taskUpdatedAt,
+                    profile: latch.lightingProfile
+                )
+            )
+        }
+
+        let profile = candidates.sorted { lhs, rhs in
+            if lhs.profile.theme.lightingPriority != rhs.profile.theme.lightingPriority {
+                return lhs.profile.theme.lightingPriority < rhs.profile.theme.lightingPriority
+            }
+            switch (lhs.updatedAt, rhs.updatedAt) {
+            case let (.some(lhsDate), .some(rhsDate)) where lhsDate != rhsDate:
+                return lhsDate > rhsDate
+            case (.some, .none):
+                return true
+            case (.none, .some):
+                return false
+            default:
+                return lhs.id > rhs.id
+            }
+        }.first?.profile ?? .fallback
+
+        let motion: GlowMotion
+        switch motionOverride {
+        case .automatic:
+            if profile.speed == .standard {
+                motion = .breathe
+            } else {
+                motion = profile.theme == .sol ? .solarFlare : .flow
+            }
+        case .breathe:
+            motion = .breathe
+        case .flow:
+            motion = profile.theme == .sol ? .solarFlare : .flow
+        }
+
+        let usesHDR: Bool
+        switch hdrOverride {
+        case .automatic: usesHDR = profile.prefersHDR
+        case .on: usesHDR = true
+        case .off: usesHDR = false
+        }
+
+        return ResolvedGlowAppearance(
+            isBusy: true,
+            theme: profile.theme,
+            motion: motion,
+            usesHDR: usesHDR
+        )
     }
 }

@@ -37,6 +37,12 @@ struct SQLiteTaskCandidateIndex: Sendable {
         let agentPathExpression = columns.contains("agent_path")
             ? "agent_path"
             : "NULL AS agent_path"
+        let modelExpression = columns.contains("model")
+            ? "model"
+            : "NULL AS model"
+        let reasoningEffortExpression = columns.contains("reasoning_effort")
+            ? "reasoning_effort"
+            : "NULL AS reasoning_effort"
         let threadSourceFilter = columns.contains("thread_source")
             ? "AND (thread_source IS NULL OR LOWER(TRIM(thread_source)) NOT IN ('subagent', 'exec'))"
             : ""
@@ -45,7 +51,8 @@ struct SQLiteTaskCandidateIndex: Sendable {
             : ""
         let query = """
             SELECT id, rollout_path, title, updated_at, archived, source,
-                   \(threadSourceExpression), \(agentPathExpression)
+                   \(threadSourceExpression), \(agentPathExpression),
+                   \(modelExpression), \(reasoningEffortExpression)
             FROM threads
             WHERE archived = 0
               AND LOWER(TRIM(source)) <> 'subagent'
@@ -88,6 +95,8 @@ struct SQLiteTaskCandidateIndex: Sendable {
                 let archived = sqlite3_column_int(statement, 4) != 0
                 let threadSource = text(in: statement, column: 6)
                 let agentPath = text(in: statement, column: 7)
+                let model = text(in: statement, column: 8)
+                let reasoningEffort = text(in: statement, column: 9)
                 guard !archived,
                       !Self.isSubagent(source: source, threadSource: threadSource, agentPath: agentPath),
                       !Self.isExecTask(source: source, threadSource: threadSource) else {
@@ -105,7 +114,12 @@ struct SQLiteTaskCandidateIndex: Sendable {
                         id: id,
                         rolloutURL: URL(fileURLWithPath: rolloutPath).standardizedFileURL,
                         title: title,
-                        updatedAt: updatedAt
+                        updatedAt: updatedAt,
+                        lightingProfile: TaskLightingProfile.normalized(
+                            model: model,
+                            serviceTier: nil,
+                            reasoningEffort: reasoningEffort
+                        )
                     )
                 )
 

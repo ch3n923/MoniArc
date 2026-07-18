@@ -7,6 +7,7 @@ struct CodexObservedTask: Identifiable, Equatable, Sendable {
     let title: String
     let runState: CodexObservedTaskRunState
     let updatedAt: Date?
+    let lightingProfile: TaskLightingProfile
 }
 
 enum CodexObservedTaskRunState: String, Equatable, Sendable {
@@ -23,7 +24,11 @@ enum CodexTaskObservationHealth: String, Equatable, Sendable {
 }
 
 enum CodexTaskObservationSignal: Equatable, Sendable {
-    case terminalError(taskID: String)
+    case terminalError(
+        taskID: String,
+        taskUpdatedAt: Date?,
+        lightingProfile: TaskLightingProfile
+    )
     case lifecycleActivity(taskID: String)
 }
 
@@ -104,6 +109,7 @@ struct TaskCandidate: Equatable, Sendable {
     let rolloutURL: URL
     let title: String
     let updatedAt: Date?
+    let lightingProfile: TaskLightingProfile
 }
 
 enum TaskCandidateIndexError: Error, Equatable, Sendable {
@@ -121,6 +127,7 @@ enum TaskLifecycleState: Equatable, Sendable {
 
 struct TaskLifecycleScanResult: Equatable, Sendable {
     let activeState: TaskLifecycleState?
+    let lightingProfile: TaskLightingProfile
     let bytesRead: Int
     let recognizedEnvelopeCount: Int
     let recognizedLifecycleCount: Int

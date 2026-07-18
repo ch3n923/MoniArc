@@ -1,13 +1,21 @@
 import SwiftUI
 
-enum BorderGlowStyle: String, CaseIterable, Sendable {
-    case breathe
-    case flow
-
+extension GlowMotionOverride {
     var localizedName: String {
         switch self {
-        case .breathe: "呼吸光效"
-        case .flow: "流动光效"
+        case .automatic: "自动"
+        case .breathe: "呼吸"
+        case .flow: "流动"
+        }
+    }
+}
+
+extension HDROverride {
+    var localizedName: String {
+        switch self {
+        case .automatic: "自动"
+        case .on: "开启"
+        case .off: "关闭"
         }
     }
 }
@@ -24,22 +32,42 @@ enum IslandDesign {
     static let error = Color("Error")
     static let idle = Color("Idle")
     static let offline = Color("Offline")
-    static let flow = Color(red: 0x6D / 255, green: 0x5D / 255, blue: 0xFC / 255)
+
+    static let inactiveGlow = Color(red: 0x85 / 255, green: 0x8D / 255, blue: 0x99 / 255)
+    static let solGlow = Color(red: 0xFF / 255, green: 0xC8 / 255, blue: 0x3D / 255)
+    static let terraGlow = Color(red: 0x55 / 255, green: 0xD6 / 255, blue: 0xFF / 255)
+    static let lunaGlow = Color(red: 0xF4 / 255, green: 0xFA / 255, blue: 0xFF / 255)
+    static let otherGlow = Color(red: 0x28 / 255, green: 0xC8 / 255, blue: 0x40 / 255)
 
     static let width: CGFloat = 304
     static let collapsedHeight: CGFloat = 32
     static let overlayCollapsedHeight: CGFloat = 34
     static let overlayExpandedHeight: CGFloat = 140
     static let floatingExpandedHeight: CGFloat = 108
-    /// Enough transparent room for SwiftUI's Gaussian blur to decay before
-    /// the NSPanel edge, preventing a visible rectangular clipping boundary.
-    /// Keep more than four blur radii between the halo and NSPanel bounds.
-    /// This prevents Core Animation's offscreen blur texture from exposing a
-    /// rectangular edge at peak opacity or during panel resizing.
-    static let glowOutset: CGFloat = 28
+    /// Transparent room for the widest Sol corona to decay before the panel
+    /// edge. The Metal renderer's largest flare needs roughly three Gaussian
+    /// radii here; otherwise its halo becomes a visibly clipped rectangle.
+    static let glowOutset: CGFloat = 104
     static let rowHeight: CGFloat = 36
     static let floatingRadius: CGFloat = 16
     static let expandedRadius: CGFloat = 18
+}
+
+extension TaskLightingTheme {
+    var glowColor: Color {
+        switch self {
+        case .sol: IslandDesign.solGlow
+        case .terra: IslandDesign.terraGlow
+        case .luna: IslandDesign.lunaGlow
+        case .other: IslandDesign.otherGlow
+        }
+    }
+}
+
+extension ResolvedGlowAppearance {
+    var glowColor: Color {
+        isBusy ? theme.glowColor : IslandDesign.inactiveGlow
+    }
 }
 
 extension IslandVisualStatus {

@@ -411,12 +411,14 @@ public struct IslandReducer: Sendable {
             state.taskSourceHealth = health
             return []
 
-        case let .terminalError(taskID):
+        case let .terminalError(taskID, taskUpdatedAt, lightingProfile):
             state.terminalErrorGeneration = state.terminalErrorGeneration.advanced()
             let token = state.terminalErrorGeneration
             let expiresAt = now.advanced(by: configuration.terminalErrorDuration)
             state.terminalErrorLatch = TerminalErrorLatch(
                 taskID: taskID,
+                taskUpdatedAt: taskUpdatedAt,
+                lightingProfile: lightingProfile,
                 expiresAt: expiresAt,
                 generation: token
             )
@@ -425,8 +427,13 @@ public struct IslandReducer: Sendable {
                 .scheduleTimer(.terminalError, token: token, after: configuration.terminalErrorDuration),
             ]
 
-        case .lifecycleActivity:
-            guard state.terminalErrorLatch != nil else { return [] }
+        case let .lifecycleActivity(taskID):
+            guard let latch = state.terminalErrorLatch else { return [] }
+            if let latchedTaskID = latch.taskID,
+               let taskID,
+               latchedTaskID != taskID {
+                return []
+            }
             state.terminalErrorLatch = nil
             state.terminalErrorGeneration = state.terminalErrorGeneration.advanced()
             return [.cancelTimer(.terminalError)]

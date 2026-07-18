@@ -71,10 +71,25 @@ final class HarnessEnvironment {
         monotonicClock.advance(by: duration)
     }
 
-    private static let runningTasks = [
-        TaskSummary(id: "harness-1", title: "实现额度状态聚合器", runState: .running),
-        TaskSummary(id: "harness-2", title: "验证刘海安全区几何", runState: .running),
-        TaskSummary(id: "harness-3", title: "补充 JSONL 隐私测试", runState: .running)
+    fileprivate static let runningTasks = [
+        TaskSummary(
+            id: "harness-1",
+            title: "实现额度状态聚合器",
+            runState: .running,
+            lightingProfile: TaskLightingProfile(theme: .terra, speed: .standard, prefersHDR: false)
+        ),
+        TaskSummary(
+            id: "harness-2",
+            title: "验证刘海安全区几何",
+            runState: .running,
+            lightingProfile: TaskLightingProfile(theme: .terra, speed: .standard, prefersHDR: false)
+        ),
+        TaskSummary(
+            id: "harness-3",
+            title: "补充 JSONL 隐私测试",
+            runState: .running,
+            lightingProfile: TaskLightingProfile(theme: .terra, speed: .standard, prefersHDR: false)
+        ),
     ]
 }
 
@@ -166,7 +181,12 @@ actor HarnessTaskSource: TaskSource {
     }
 
     func emitTerminalError(taskID: String?) {
-        continuation?.yield(.terminalError(taskID: taskID))
+        let task = tasks.first { $0.id == taskID }
+        continuation?.yield(.terminalError(
+            taskID: taskID,
+            taskUpdatedAt: task?.updatedAt,
+            lightingProfile: task?.lightingProfile ?? .fallback
+        ))
     }
 }
 
@@ -177,6 +197,11 @@ final class HarnessController {
     private let screenProvider: AppKitScreenProvider
     private let panelCoordinator: PanelCoordinator
     private var window: NSWindow?
+    private var harnessStatus: IslandVisualStatus = .running
+    private var harnessTheme: TaskLightingTheme = .terra
+    private var harnessSpeed: TaskSpeedMode = .standard
+    private var harnessReasoningEffort: HarnessReasoningEffort = .medium
+    private var usesMultiTaskPriorityFixture = false
 
     init(
         store: IslandStore,
@@ -191,12 +216,20 @@ final class HarnessController {
     }
 
     func show() {
+        runLightingLogicChecks()
         panelCoordinator.onFrameTransition = { from, to, duration, revision, pid in
             print("[Harness] panel revision=\(revision) duration=\(String(format: "%.3f", duration)) from=\(NSStringFromRect(from)) to=\(NSStringFromRect(to)) frontmostPID=\(pid.map(String.init) ?? "nil")")
         }
 
         let root = HarnessControlView(
-            setStatus: { [weak environment] in environment?.setTaskStatus($0) },
+            model: panelCoordinator.model,
+            setStatus: { [weak self] in self?.setTaskStatusImmediately($0) },
+            setTheme: { [weak self] in self?.setHarnessTheme($0) },
+            setSpeed: { [weak self] in self?.setHarnessSpeed($0) },
+            setReasoningEffort: { [weak self] in self?.setHarnessReasoningEffort($0) },
+            setMultiTaskPriorityFixture: { [weak self] in self?.setMultiTaskPriorityFixture($0) },
+            setGlowOverride: { [weak self] in self?.panelCoordinator.setGlowMotionOverride($0) },
+            setHDROverride: { [weak self] in self?.panelCoordinator.setHDROverride($0) },
             setPlacement: { [weak store] in store?.send(.placementPreferenceChanged($0)) },
             setDisplay: { [weak self] in self?.setDisplayProfile($0) },
             refreshQuota: { [weak store] in store?.send(.refreshQuota) },
@@ -209,16 +242,257 @@ final class HarnessController {
         let window = NSWindow(contentViewController: host)
         window.title = "MoniArc Harness"
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.setContentSize(CGSize(width: 470, height: 440))
+        window.setContentSize(CGSize(width: 520, height: 640))
         window.isReleasedWhenClosed = false
         window.center()
         window.orderFrontRegardless()
         self.window = window
+        setTaskStatusImmediately(.running)
     }
 
     func close() {
         window?.close()
         window = nil
+    }
+
+    private func runLightingLogicChecks() {
+        let terraFastHDR = TaskLightingProfile.normalized(
+            model: "gpt-5.6-terra",
+            serviceTier: "priority",
+            reasoningEffort: "high"
+        )
+        precondition(terraFastHDR == TaskLightingProfile(theme: .terra, speed: .fast, prefersHDR: true))
+        precondition(TaskLightingProfile.normalizedSpeed("fast") == .fast)
+        precondition(TaskLightingProfile.normalized(model: nil, serviceTier: nil, reasoningEffort: nil) == .fallback)
+        for effort in ["high", "xhigh", "max", "ultra"] {
+            precondition(TaskLightingProfile.normalizedHDRPreference(effort))
+        }
+        precondition(!TaskLightingProfile.normalizedHDRPreference("medium"))
+
+        let now = Date()
+        var state = IslandState(
+            tasks: [
+                TaskSummary(
+                    id: "terra",
+                    title: "Terra",
+                    runState: .running,
+                    updatedAt: now,
+                    lightingProfile: terraFastHDR
+                )
+            ],
+            taskSourceHealth: .connected
+        )
+        var appearance = state.resolvedGlowAppearance(
+            motionOverride: .automatic,
+            hdrOverride: .automatic
+        )
+        precondition(appearance.theme == .terra && appearance.motion == .flow && appearance.usesHDR)
+
+        state.tasks = [
+            TaskSummary(
+                id: "sol",
+                title: "Sol",
+                runState: .waitingForUser,
+                updatedAt: now.addingTimeInterval(-10),
+                lightingProfile: TaskLightingProfile(theme: .sol, speed: .fast, prefersHDR: false)
+            ),
+            TaskSummary(
+                id: "other-newest",
+                title: "Other",
+                runState: .running,
+                updatedAt: now,
+                lightingProfile: TaskLightingProfile(theme: .other, speed: .standard, prefersHDR: true)
+            ),
+        ]
+        appearance = state.resolvedGlowAppearance(
+            motionOverride: .automatic,
+            hdrOverride: .automatic
+        )
+        precondition(appearance.theme == .sol && appearance.motion == .solarFlare && !appearance.usesHDR)
+
+        appearance = state.resolvedGlowAppearance(motionOverride: .breathe, hdrOverride: .on)
+        precondition(appearance.motion == .breathe && appearance.usesHDR)
+        appearance = state.resolvedGlowAppearance(motionOverride: .flow, hdrOverride: .off)
+        precondition(appearance.motion == .solarFlare && !appearance.usesHDR)
+
+        state.tasks = [
+            TaskSummary(
+                id: "terra-older",
+                title: "Terra older",
+                runState: .running,
+                updatedAt: now.addingTimeInterval(-5),
+                lightingProfile: TaskLightingProfile(theme: .terra, speed: .fast, prefersHDR: true)
+            ),
+            TaskSummary(
+                id: "terra-newer",
+                title: "Terra newer",
+                runState: .running,
+                updatedAt: now,
+                lightingProfile: TaskLightingProfile(theme: .terra, speed: .standard, prefersHDR: false)
+            ),
+        ]
+        appearance = state.resolvedGlowAppearance(
+            motionOverride: .automatic,
+            hdrOverride: .automatic
+        )
+        precondition(appearance.theme == .terra && appearance.motion == .breathe && !appearance.usesHDR)
+
+        state.tasks = []
+        state.terminalErrorLatch = TerminalErrorLatch(
+            taskID: "luna-error",
+            taskUpdatedAt: now,
+            lightingProfile: TaskLightingProfile(theme: .luna, speed: .standard, prefersHDR: true),
+            expiresAt: .init(nanoseconds: 1),
+            generation: .init()
+        )
+        appearance = state.resolvedGlowAppearance(
+            motionOverride: .automatic,
+            hdrOverride: .automatic
+        )
+        precondition(appearance.isBusy && appearance.theme == .luna && appearance.usesHDR)
+
+        state.terminalErrorLatch = nil
+        appearance = state.resolvedGlowAppearance(motionOverride: .flow, hdrOverride: .on)
+        precondition(appearance == .inactive)
+
+        let fixtureURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MoniArc-lighting-harness-\(UUID().uuidString).jsonl")
+        defer { try? FileManager.default.removeItem(at: fixtureURL) }
+        let fixture = """
+        {"type":"turn_context","payload":{"model":"gpt-5.6-sol","effort":"high"}}
+        {"type":"event_msg","payload":{"type":"thread_settings_applied","thread_settings":{"service_tier":"priority"}}}
+        {"type":"event_msg","payload":{"type":"task_started"}}
+
+        """
+        do {
+            try Data(fixture.utf8).write(to: fixtureURL, options: .atomic)
+            let result = try JSONLTaskLifecycleScanner().scan(
+                fileURL: fixtureURL,
+                byteLimit: 16 * 1_024
+            )
+            precondition(result.activeState == .running)
+            precondition(result.lightingProfile == TaskLightingProfile(
+                theme: .sol,
+                speed: .fast,
+                prefersHDR: true
+            ))
+        } catch {
+            preconditionFailure("Lighting JSONL harness check failed: \(error)")
+        }
+
+        print("[Harness] model-linked lighting logic checks passed")
+    }
+
+    /// Visual state controls should respond in the same run-loop turn. The
+    /// source actors remain useful for testing startup and streaming behavior,
+    /// but routing a manual button press through two actor hops and an
+    /// AsyncStream made the visual Harness unnecessarily sluggish.
+    private func setTaskStatusImmediately(_ status: IslandVisualStatus) {
+        harnessStatus = status
+        let health: SourceHealth
+        let tasks = harnessTasks(for: status)
+
+        switch status {
+        case .running:
+            health = .connected
+        case .waitingForUser:
+            health = .connected
+        case .error:
+            health = .connected
+        case .idle:
+            health = .connected
+        case .disconnected:
+            health = .disconnected
+        }
+
+        store.send(.taskSourceEvent(.healthChanged(health)))
+        store.send(.taskSourceEvent(.lifecycleActivity(taskID: tasks.first?.id)))
+        store.send(.taskSourceEvent(.snapshot(tasks)))
+        if status == .error {
+            let task = tasks.first
+            store.send(.taskSourceEvent(.terminalError(
+                taskID: task?.id,
+                taskUpdatedAt: task?.updatedAt,
+                lightingProfile: task?.lightingProfile ?? .fallback
+            )))
+        }
+    }
+
+    private func setHarnessTheme(_ theme: TaskLightingTheme) {
+        harnessTheme = theme
+        setTaskStatusImmediately(harnessStatus)
+    }
+
+    private func setHarnessSpeed(_ speed: TaskSpeedMode) {
+        harnessSpeed = speed
+        setTaskStatusImmediately(harnessStatus)
+    }
+
+    private func setHarnessReasoningEffort(_ effort: HarnessReasoningEffort) {
+        harnessReasoningEffort = effort
+        setTaskStatusImmediately(harnessStatus)
+    }
+
+    private func setMultiTaskPriorityFixture(_ enabled: Bool) {
+        usesMultiTaskPriorityFixture = enabled
+        setTaskStatusImmediately(harnessStatus)
+    }
+
+    private func harnessTasks(for status: IslandVisualStatus) -> [TaskSummary] {
+        let runState: TaskRunState
+        switch status {
+        case .running: runState = .running
+        case .waitingForUser: runState = .waitingForUser
+        case .error: runState = .error
+        case .idle, .disconnected: return []
+        }
+
+        let selectedProfile = TaskLightingProfile.normalized(
+            model: harnessTheme.harnessModelID,
+            serviceTier: harnessSpeed == .fast ? "priority" : "default",
+            reasoningEffort: harnessReasoningEffort.rawValue
+        )
+        let now = Date()
+
+        guard usesMultiTaskPriorityFixture else {
+            return [
+                TaskSummary(
+                    id: "harness-1",
+                    title: "实现模型联动灯效",
+                    runState: runState,
+                    updatedAt: now,
+                    lightingProfile: selectedProfile
+                )
+            ]
+        }
+
+        // Deliberately make Other the newest and Sol the oldest. A gold result
+        // proves model priority wins before recency.
+        return [
+            harnessPriorityTask(id: "other", theme: .other, runState: runState, updatedAt: now),
+            harnessPriorityTask(id: "luna", theme: .luna, runState: runState, updatedAt: now.addingTimeInterval(-1)),
+            harnessPriorityTask(id: "terra", theme: .terra, runState: runState, updatedAt: now.addingTimeInterval(-2)),
+            harnessPriorityTask(id: "sol", theme: .sol, runState: runState, updatedAt: now.addingTimeInterval(-3)),
+        ]
+    }
+
+    private func harnessPriorityTask(
+        id: String,
+        theme: TaskLightingTheme,
+        runState: TaskRunState,
+        updatedAt: Date
+    ) -> TaskSummary {
+        TaskSummary(
+            id: "harness-\(id)",
+            title: "多任务优先级验证 \(id)",
+            runState: runState,
+            updatedAt: updatedAt,
+            lightingProfile: TaskLightingProfile(
+                theme: theme,
+                speed: harnessSpeed,
+                prefersHDR: harnessReasoningEffort.prefersHDR
+            )
+        )
     }
 
     private func setDisplayProfile(_ profile: HarnessDisplayProfile) {
@@ -302,8 +576,67 @@ enum HarnessDisplayProfile: String, CaseIterable, Identifiable {
     }
 }
 
+enum HarnessReasoningEffort: String, CaseIterable, Identifiable {
+    case low
+    case medium
+    case high
+    case xhigh
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .low: "低"
+        case .medium: "中"
+        case .high: "高"
+        case .xhigh: "极高"
+        }
+    }
+
+    var prefersHDR: Bool {
+        TaskLightingProfile.normalizedHDRPreference(rawValue)
+    }
+}
+
+private extension TaskLightingTheme {
+    var harnessModelID: String {
+        switch self {
+        case .sol: "gpt-5.6-sol"
+        case .terra: "gpt-5.6-terra"
+        case .luna: "gpt-5.6-luna"
+        case .other: "gpt-5.5"
+        }
+    }
+
+    var harnessLabel: String {
+        switch self {
+        case .sol: "Sol"
+        case .terra: "Terra"
+        case .luna: "Luna"
+        case .other: "其他"
+        }
+    }
+}
+
+private extension GlowMotion {
+    var harnessLabel: String {
+        switch self {
+        case .breathe: "2.5s 呼吸"
+        case .flow: "4s 流动"
+        case .solarFlare: "Sol 太阳耀斑"
+        }
+    }
+}
+
 private struct HarnessControlView: View {
+    @ObservedObject var model: IslandViewModel
     var setStatus: (IslandVisualStatus) -> Void
+    var setTheme: (TaskLightingTheme) -> Void
+    var setSpeed: (TaskSpeedMode) -> Void
+    var setReasoningEffort: (HarnessReasoningEffort) -> Void
+    var setMultiTaskPriorityFixture: (Bool) -> Void
+    var setGlowOverride: (GlowMotionOverride) -> Void
+    var setHDROverride: (HDROverride) -> Void
     var setPlacement: (PlacementPreference) -> Void
     var setDisplay: (HarnessDisplayProfile) -> Void
     var refreshQuota: () -> Void
@@ -313,6 +646,12 @@ private struct HarnessControlView: View {
     var advanceClock: (Duration) -> Void
 
     @State private var displayProfile: HarnessDisplayProfile = .actual
+    @State private var theme: TaskLightingTheme = .terra
+    @State private var speed: TaskSpeedMode = .standard
+    @State private var reasoningEffort: HarnessReasoningEffort = .medium
+    @State private var multiTaskPriority = false
+    @State private var glowOverride = PanelCoordinator.savedGlowMotionOverride
+    @State private var hdrOverride = PanelCoordinator.savedHDROverride
 
     var body: some View {
         Form {
@@ -322,6 +661,50 @@ private struct HarnessControlView: View {
                         Button(status.localizedName) { setStatus(status) }
                     }
                 }
+            }
+            Section("模型联动灯效") {
+                Picker("模型", selection: $theme) {
+                    ForEach(TaskLightingTheme.allCases, id: \.self) { value in
+                        Text(value.harnessLabel).tag(value)
+                    }
+                }
+                .onChange(of: theme) { _, value in setTheme(value) }
+
+                Picker("速度", selection: $speed) {
+                    Text("标准").tag(TaskSpeedMode.standard)
+                    Text("快速 priority").tag(TaskSpeedMode.fast)
+                }
+                .onChange(of: speed) { _, value in setSpeed(value) }
+
+                Picker("推理强度", selection: $reasoningEffort) {
+                    ForEach(HarnessReasoningEffort.allCases) { value in
+                        Text(value.label).tag(value)
+                    }
+                }
+                .onChange(of: reasoningEffort) { _, value in setReasoningEffort(value) }
+
+                Toggle("Sol 优先的四任务测试", isOn: $multiTaskPriority)
+                    .onChange(of: multiTaskPriority) { _, value in setMultiTaskPriorityFixture(value) }
+
+                Text(resolvedAppearanceText)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(resolvedAppearanceText)
+            }
+            Section("手动覆盖") {
+                Picker("光效", selection: $glowOverride) {
+                    ForEach(GlowMotionOverride.allCases, id: \.self) { value in
+                        Text(value.localizedName).tag(value)
+                    }
+                }
+                .onChange(of: glowOverride) { _, value in setGlowOverride(value) }
+
+                Picker("HDR", selection: $hdrOverride) {
+                    ForEach(HDROverride.allCases, id: \.self) { value in
+                        Text(value.localizedName).tag(value)
+                    }
+                }
+                .onChange(of: hdrOverride) { _, value in setHDROverride(value) }
             }
             Section("位置与屏幕") {
                 HStack {
@@ -358,7 +741,13 @@ private struct HarnessControlView: View {
         }
         .formStyle(.grouped)
         .padding(12)
-        .frame(width: 470, height: 440)
+        .frame(width: 520, height: 640)
+    }
+
+    private var resolvedAppearanceText: String {
+        let appearance = model.glowAppearance
+        guard appearance.isBusy else { return "实际：灰色静态 · SDR" }
+        return "实际：\(appearance.theme.harnessLabel) · \(appearance.motion.harnessLabel) · \(appearance.usesHDR ? "HDR" : "SDR")"
     }
 }
 #endif

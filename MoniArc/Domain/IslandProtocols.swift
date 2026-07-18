@@ -8,7 +8,11 @@ public enum QuotaSourceEvent: Equatable, Sendable {
 public enum TaskSourceEvent: Equatable, Sendable {
     case snapshot([TaskSummary])
     case healthChanged(SourceHealth)
-    case terminalError(taskID: String?)
+    case terminalError(
+        taskID: String?,
+        taskUpdatedAt: Date?,
+        lightingProfile: TaskLightingProfile
+    )
     case lifecycleActivity(taskID: String?)
 }
 

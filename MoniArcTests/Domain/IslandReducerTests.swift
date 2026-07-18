@@ -258,7 +258,11 @@ final class IslandReducerTests: XCTestCase {
         var state = IslandState(taskSourceHealth: .connected)
         _ = reducer.reduce(
             state: &state,
-            action: .taskSourceEvent(.terminalError(taskID: "task")),
+            action: .taskSourceEvent(.terminalError(
+                taskID: "task",
+                taskUpdatedAt: nil,
+                lightingProfile: .fallback
+            )),
             now: zero
         )
         let firstToken = state.terminalErrorGeneration
@@ -277,7 +281,11 @@ final class IslandReducerTests: XCTestCase {
 
         _ = reducer.reduce(
             state: &state,
-            action: .taskSourceEvent(.terminalError(taskID: "task")),
+            action: .taskSourceEvent(.terminalError(
+                taskID: "task",
+                taskUpdatedAt: nil,
+                lightingProfile: .fallback
+            )),
             now: zero.advanced(by: .seconds(31))
         )
         XCTAssertNotNil(state.terminalErrorLatch)

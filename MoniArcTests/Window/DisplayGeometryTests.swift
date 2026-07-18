@@ -9,8 +9,8 @@ final class DisplayGeometryTests: XCTestCase {
         let expanded = PanelGeometry.resolve(display: display, preference: .automatic, expanded: true)
 
         XCTAssertEqual(collapsed.placement, .overlay)
-        XCTAssertEqual(collapsed.frame.size, CGSize(width: 360, height: 62))
-        XCTAssertEqual(expanded.frame.size, CGSize(width: 360, height: 168))
+        XCTAssertEqual(collapsed.frame.size, CGSize(width: 512, height: 138))
+        XCTAssertEqual(expanded.frame.size, CGSize(width: 512, height: 244))
         XCTAssertEqual(collapsed.frame.maxY, expanded.frame.maxY)
         XCTAssertEqual(collapsed.physicalNotchWidth, 185)
         XCTAssertTrue(collapsed.usesWingLayout)
@@ -25,8 +25,8 @@ final class DisplayGeometryTests: XCTestCase {
         let expanded = PanelGeometry.resolve(display: display, preference: .automatic, expanded: true)
 
         XCTAssertEqual(collapsed.placement, .floating)
-        XCTAssertEqual(collapsed.frame.size, CGSize(width: 360, height: 88))
-        XCTAssertEqual(expanded.frame.size, CGSize(width: 360, height: 164))
+        XCTAssertEqual(collapsed.frame.size, CGSize(width: 512, height: 240))
+        XCTAssertEqual(expanded.frame.size, CGSize(width: 512, height: 316))
         XCTAssertEqual(collapsed.frame.maxY, expanded.frame.maxY)
         XCTAssertEqual(collapsed.frame.maxY, display.frame.maxY - display.topChromeHeight - 8)
     }
@@ -52,7 +52,7 @@ final class DisplayGeometryTests: XCTestCase {
         let flatOverlay = PanelGeometry.resolve(display: snapshot(notchWidth: nil), preference: .overlay, expanded: false)
         XCTAssertEqual(flatOverlay.placement, .overlay)
         XCTAssertFalse(flatOverlay.usesWingLayout)
-        XCTAssertEqual(flatOverlay.frame.size, CGSize(width: 360, height: 60))
+        XCTAssertEqual(flatOverlay.frame.size, CGSize(width: 512, height: 136))
     }
 
     func testTopEdgePointerHitUsesClosedUpperBoundAndSmallOvershoot() {
@@ -65,7 +65,7 @@ final class DisplayGeometryTests: XCTestCase {
     }
 
     func testCollapsedOverlayHoverRegionExcludesGlowAndInsetsVisibleSurface() {
-        let panelFrame = CGRect(x: 576, y: 920, width: 360, height: 62)
+        let panelFrame = CGRect(x: 500, y: 844, width: 512, height: 138)
 
         let region = PointerHitTesting.hoverRegion(
             panelFrame: panelFrame,
@@ -78,7 +78,7 @@ final class DisplayGeometryTests: XCTestCase {
     }
 
     func testCollapsedFloatingHoverRegionTracksVisibleSurfaceInsideBothGlowMargins() {
-        let panelFrame = CGRect(x: 576, y: 861, width: 360, height: 88)
+        let panelFrame = CGRect(x: 500, y: 709, width: 512, height: 240)
 
         let region = PointerHitTesting.hoverRegion(
             panelFrame: panelFrame,
@@ -86,11 +86,11 @@ final class DisplayGeometryTests: XCTestCase {
             phase: .expandPending
         )
 
-        XCTAssertEqual(region, CGRect(x: 612, y: 892, width: 288, height: 26))
+        XCTAssertEqual(region, CGRect(x: 612, y: 816, width: 288, height: 26))
     }
 
     func testExpandedHoverRegionKeepsTheWholeInteractiveSurfaceAvailable() {
-        let panelFrame = CGRect(x: 576, y: 814, width: 360, height: 168)
+        let panelFrame = CGRect(x: 500, y: 738, width: 512, height: 244)
 
         let region = PointerHitTesting.hoverRegion(
             panelFrame: panelFrame,
