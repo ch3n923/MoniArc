@@ -622,7 +622,7 @@ private extension GlowMotion {
     var harnessLabel: String {
         switch self {
         case .breathe: "2.5s 呼吸"
-        case .flow: "4s 流动"
+        case .flow: "8s 柔和流动"
         case .solarFlare: "Sol 太阳耀斑"
         }
     }

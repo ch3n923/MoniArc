@@ -226,27 +226,54 @@ fragment float4 hdrGlowFragment(
     );
     float surfaceAA = max(fwidth(surfaceDistance), 0.75);
     float surfaceCoverage = 1.0 - smoothstep(-surfaceAA, surfaceAA, surfaceDistance);
-    haloCoverage *= (1.0 - surfaceCoverage) * uniforms.metadata.y;
+    // The black island surface is composited above this renderer. Keep every
+    // halo layer outside it so the stable rim and its travelling accent stay
+    // visually separate from the content surface.
+    float exteriorMask = (1.0 - surfaceCoverage) * uniforms.metadata.y;
+    haloCoverage *= exteriorMask;
 
     float bandWeight = 0.0;
+    float edgeHighlightWeight = 0.0;
+    float flowHaloCoverage = 0.0;
     if (isFlow) {
-        float relativeProgress = fract(pathProgress - phase + 1.0);
-        float bandLength = uniforms.animation.y;
-        float edge = min(0.025, bandLength * 0.2);
-        bandWeight = smoothstep(0.0, edge, relativeProgress)
-            * (1.0 - smoothstep(bandLength - edge, bandLength, relativeProgress));
+        // Use a wrapped Gaussian brightness field instead of a trimmed band.
+        // Its energy fades continuously in both directions, so there is no
+        // visible leading or trailing edge while it crosses the outline seam.
+        float flowSoftness = max(0.18, uniforms.animation.y * 0.36);
+        float distanceFromFlowCenter = wrappedDistance(pathProgress, phase);
+        bandWeight = exp(-0.5 * pow(distanceFromFlowCenter / flowSoftness, 2.0));
+        edgeHighlightWeight = exp(
+            -0.5 * pow(distanceFromFlowCenter / (flowSoftness * 0.52), 2.0)
+        );
+
+        // A flow is an extra, wider halo travelling over a continuously lit
+        // border. It is deliberately not another changing stroke, otherwise
+        // the edge appears to go dark between passes.
+        float flowNearGlow = exp(-0.5 * pow(closestDistance / (3.4 * scale), 2.0)) * 0.18;
+        float flowMiddleGlow = exp(-0.5 * pow(closestDistance / (7.6 * scale), 2.0)) * 0.15;
+        float flowOuterGlow = exp(-0.5 * pow(closestDistance / (13.5 * scale), 2.0)) * 0.085;
+        flowHaloCoverage = min(0.54, flowNearGlow + flowMiddleGlow + flowOuterGlow)
+            * bandWeight * exteriorMask;
     }
 
     float coreBrightness = uniforms.animation.z;
     float haloBrightness = uniforms.animation.w;
     float coreEnergy = uniforms.metadata.z;
     float haloEnergy = uniforms.metadata.z;
+    float flowEdgeHighlightEnergy = 0.0;
+    float flowHaloAlpha = 0.0;
 
     if (isFlow) {
-        coreBrightness = mix(uniforms.animation.z, uniforms.animation.w, bandWeight);
-        haloBrightness = mix(uniforms.effects.x, uniforms.animation.w, bandWeight);
-        coreEnergy = mix(0.70, 1.0, bandWeight);
-        haloEnergy = mix(0.30, 1.0, bandWeight);
+        // Keep the rim and its near-field glow on at a fixed level. The moving
+        // highlight below is added as an outer halo only.
+        coreBrightness = uniforms.animation.z;
+        haloBrightness = uniforms.effects.x;
+        coreEnergy = 0.86;
+        haloEnergy = 0.52;
+        // The border itself gets a narrower moving highlight. It has a clear
+        // centre, but the same Gaussian falloff prevents readable endpoints.
+        flowEdgeHighlightEnergy = edgeHighlightWeight * 0.68;
+        flowHaloAlpha = min(1.0, flowHaloCoverage * 1.22);
     } else if (hasSolarFlare) {
         float solarCoreBrightness = mix(uniforms.animation.z, uniforms.animation.w, flareEnergy);
         float solarHaloBrightness = mix(uniforms.effects.x, uniforms.animation.w, flareEnergy);
@@ -261,9 +288,15 @@ fragment float4 hdrGlowFragment(
     float3 coreLinear = displayP3ToLinear(uniforms.coreColor.rgb);
     float3 glowLinear = displayP3ToLinear(uniforms.glowColor.rgb);
     float haloAlpha = min(1.0, haloCoverage * haloEnergy);
-    float combinedAlpha = clamp(max(surfaceCoverage, max(coreCoverage, haloAlpha)), 0.0, 1.0);
+    float combinedAlpha = clamp(
+        max(surfaceCoverage, max(coreCoverage, max(haloAlpha, flowHaloAlpha))),
+        0.0,
+        1.0
+    );
     float3 premultipliedColor = coreLinear * coreBrightness * coreCoverage * coreEnergy
-        + glowLinear * haloBrightness * haloAlpha;
+        + coreLinear * uniforms.animation.w * coreCoverage * flowEdgeHighlightEnergy
+        + glowLinear * haloBrightness * haloAlpha
+        + glowLinear * uniforms.animation.w * flowHaloAlpha;
 
     return float4(premultipliedColor, combinedAlpha);
 }

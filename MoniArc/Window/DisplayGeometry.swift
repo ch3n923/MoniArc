@@ -197,4 +197,22 @@ enum PointerHitTesting {
             && point.y >= rect.minY
             && point.y <= rect.maxY + topOvershoot
     }
+
+    /// The panel needs a generous transparent frame to render the glow, but
+    /// only the visible island is allowed to receive mouse events.
+    static func shouldIgnoreMouseEvents(
+        at location: CGPoint,
+        panelFrame: CGRect,
+        placement: PanelPlacement,
+        phase: PanelPhase
+    ) -> Bool {
+        !contains(
+            location,
+            in: hoverRegion(
+                panelFrame: panelFrame,
+                placement: placement,
+                phase: phase
+            )
+        )
+    }
 }

@@ -434,7 +434,7 @@ fileprivate final class HDRGlowRenderer: NSObject, MTKViewDelegate {
                 coreBrightness: 1.35,
                 peakBrightness: 3.8,
                 ambientBrightness: 1.45,
-                progress: Float(seconds.truncatingRemainder(dividingBy: 4) / 4),
+                progress: Float(seconds.truncatingRemainder(dividingBy: 8) / 8),
                 intensity: 1,
                 motionCode: 1,
                 hasGlow: true

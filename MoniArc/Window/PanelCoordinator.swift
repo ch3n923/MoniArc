@@ -250,12 +250,14 @@ final class PanelCoordinator: NSObject, PanelDriver {
 
     private func updatePointerState(at location: CGPoint) {
         guard isSessionAvailable else { return }
-        let hoverRegion = PointerHitTesting.hoverRegion(
+        let shouldIgnoreMouseEvents = PointerHitTesting.shouldIgnoreMouseEvents(
+            at: location,
             panelFrame: panel.frame,
             placement: model.placement,
             phase: reflectedPanelPhase
         )
-        let isInside = PointerHitTesting.contains(location, in: hoverRegion)
+        panel.ignoresMouseEvents = shouldIgnoreMouseEvents
+        let isInside = !shouldIgnoreMouseEvents
         guard isInside != pointerInside else { return }
         pointerInside = isInside
         onHoverChanged?(isInside)

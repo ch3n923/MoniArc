@@ -77,6 +77,23 @@ final class DisplayGeometryTests: XCTestCase {
         XCTAssertFalse(PointerHitTesting.contains(CGPoint(x: region.midX, y: panelFrame.minY), in: region))
     }
 
+    func testCollapsedOverlayLetsClicksPassThroughTheTransparentGlowMargin() {
+        let panelFrame = CGRect(x: 500, y: 844, width: 512, height: 138)
+
+        XCTAssertTrue(PointerHitTesting.shouldIgnoreMouseEvents(
+            at: CGPoint(x: panelFrame.minX + 1, y: panelFrame.minY + 1),
+            panelFrame: panelFrame,
+            placement: .overlay,
+            phase: .collapsed
+        ))
+        XCTAssertFalse(PointerHitTesting.shouldIgnoreMouseEvents(
+            at: CGPoint(x: panelFrame.midX, y: panelFrame.maxY - 16),
+            panelFrame: panelFrame,
+            placement: .overlay,
+            phase: .collapsed
+        ))
+    }
+
     func testCollapsedFloatingHoverRegionTracksVisibleSurfaceInsideBothGlowMargins() {
         let panelFrame = CGRect(x: 500, y: 709, width: 512, height: 240)
 

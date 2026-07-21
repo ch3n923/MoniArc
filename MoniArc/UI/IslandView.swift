@@ -487,39 +487,77 @@ private struct LegacyStatusGlow: View {
             glowLayers(color: appearance.glowColor, intensity: 0.28 + 0.72 * wave)
         case .flow, .solarFlare:
             // SwiftUI fallback intentionally degrades the Sol flare to a gold flow band.
-            flowGlow(progress: reduceMotion ? 0.5 : seconds.truncatingRemainder(dividingBy: 4) / 4)
+            flowGlow(progress: reduceMotion ? 0.5 : seconds.truncatingRemainder(dividingBy: 8) / 8)
         }
     }
 
     private func flowGlow(progress: Double) -> some View {
         ZStack {
-            glowLayers(color: appearance.glowColor, intensity: 0.12)
-            flowBandLayers(progress: progress, intensity: 0.60)
+            // Keep the whole edge lit first; the moving band is a wider halo
+            // layered on top, never a replacement for the border glow.
+            glowLayers(color: appearance.glowColor, intensity: 0.32)
+            flowBandLayers(progress: progress, intensity: 0.72)
+            flowEdgeHighlightLayers(progress: progress, intensity: 0.84)
+        }
+    }
+
+    private func flowEdgeHighlightLayers(progress: Double, intensity: Double) -> some View {
+        ZStack {
+            // Three centred spans form one readable highlight on the rim. The
+            // longer, dimmer spans feather both ends instead of exposing the
+            // trim boundary of the shortest bright segment.
+            flowBandLayer(
+                center: progress, length: 0.22,
+                width: 1.8, blur: 0.6, opacity: intensity * 0.46
+            )
+            flowBandLayer(
+                center: progress, length: 0.36,
+                width: 2.5, blur: 1.1, opacity: intensity * 0.25
+            )
+            flowBandLayer(
+                center: progress, length: 0.52,
+                width: 3.5, blur: 1.9, opacity: intensity * 0.12
+            )
         }
     }
 
     private func flowBandLayers(progress: Double, intensity: Double) -> some View {
-        let band = FlowBandShape(
-            bottomRadius: bottomRadius,
-            closesTop: closesTop,
-            progress: progress,
-            bandLength: 0.55
-        )
-        return ZStack {
-            flowBandLayer(band, width: 3.5, blur: 0.7, opacity: intensity * 0.58)
-            flowBandLayer(band, width: 5.0, blur: 1.4, opacity: intensity * 0.27)
-            flowBandLayer(band, width: 6.5, blur: 2.4, opacity: intensity * 0.11)
-            flowBandLayer(band, width: 7.0, blur: 3.5, opacity: intensity * 0.04)
+        ZStack {
+            // Concentric bands share one moving centre but use progressively
+            // longer spans. Their staggered falloff approximates the Metal
+            // Gaussian and removes a single readable start/end boundary.
+            flowBandLayer(
+                center: progress, length: 0.34,
+                width: 5.0, blur: 1.8, opacity: intensity * 0.24
+            )
+            flowBandLayer(
+                center: progress, length: 0.52,
+                width: 7.0, blur: 3.2, opacity: intensity * 0.16
+            )
+            flowBandLayer(
+                center: progress, length: 0.72,
+                width: 10.0, blur: 5.2, opacity: intensity * 0.09
+            )
+            flowBandLayer(
+                center: progress, length: 0.90,
+                width: 14.0, blur: 8.0, opacity: intensity * 0.04
+            )
         }
     }
 
     private func flowBandLayer(
-        _ band: FlowBandShape,
+        center: Double,
+        length: Double,
         width: CGFloat,
         blur: CGFloat,
         opacity: Double
     ) -> some View {
-        band
+        FlowBandShape(
+            bottomRadius: bottomRadius,
+            closesTop: closesTop,
+            progress: center - length * 0.5,
+            bandLength: length
+        )
             .stroke(
                 appearance.glowColor,
                 style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round)
@@ -564,7 +602,8 @@ private struct FlowBandShape: Shape {
             bottomRadius: bottomRadius,
             closesTop: closesTop
         ).path(in: rect)
-        let start = progress.truncatingRemainder(dividingBy: 1)
+        let start = (progress.truncatingRemainder(dividingBy: 1) + 1)
+            .truncatingRemainder(dividingBy: 1)
         let end = start + bandLength
 
         if end <= 1 {
